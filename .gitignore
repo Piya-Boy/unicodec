@@ -1,0 +1,34 @@
+# Build output
+/dist/
+/build/
+/bin/
+*.exe
+*.out
+
+# Go
+/sdk/go/vendor/
+*.test
+
+# Node
+node_modules/
+/sdk/node/dist/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# Env / secrets
+.env
+.env.*
+*.key
+*.pem
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Temp
+/tmp/
+*.tmp
