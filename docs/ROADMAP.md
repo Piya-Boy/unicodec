@@ -24,11 +24,11 @@ gap (SECURITY.md §6). No format change; no RFC needed.
       drain NewDecoder to EOF; reuse Decoder (no duplicated crypto); byte-identical
       round-trip; parity with Node `decodeBytes()`.
       (checker-confirmed 2026-08-08; Go test, vet, race, vectorgen check)
-- [ ] Sync docs/API.md and docs/SDK.md to the REAL Go surface (Encode*/Verify/Inspect/
+- [x] Sync docs/API.md and docs/SDK.md to the REAL Go surface (Encode*/Verify/Inspect/
       DecodeBytes/NewEncoder/NewDecoder). No claimed-but-absent APIs.
-      Maker: gpt-5.6-luna · Checker: gpt-5.6-sol
-- [ ] Add Go conformance test: Inspect and DecodeBytes agree with the streaming Decoder
-      and the shared vectors.
+      Maker: gpt-5.6-luna · Checker: gpt-5.6-sol — confirmed 2026-08-08
+- [x] Add Go conformance test: Inspect and DecodeBytes agree with the streaming Decoder
+      and all 12 shared positive vectors — checker-confirmed 2026-08-08.
 
 When "Active work" is empty and Go/Node surfaces match, merge feature/node-sdk-conformance
 to main (human gate), then start Phase 2.
@@ -51,7 +51,7 @@ Exit criteria: spec reviewed, no open format questions, RFC process in place.
 - [x] Node.js SDK
 - [x] Conformance: both SDKs pass all vectors byte-exact
 - [x] Cross-decode: Go↔Node round-trip
-- [~] Go/Node public-API parity (see "Active work" — Inspect/DecodeBytes pending)
+- [x] Go/Node public-API parity — checker-confirmed 2026-08-08
 
 Exit criteria: two SDKs produce byte-identical output, cross-decode, AND expose equivalent
 public APIs. This is the proof that the format is language-agnostic.
