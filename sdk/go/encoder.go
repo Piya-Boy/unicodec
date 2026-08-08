@@ -68,16 +68,7 @@ func (e *Encoder) Close() (err error) {
 		return errEncoderClosed
 	}
 	e.closed = true
-	defer func() {
-		closeErr := e.spool.Close()
-		removeErr := os.Remove(e.spool.Name())
-		if err == nil && closeErr != nil {
-			err = closeErr
-		}
-		if err == nil && removeErr != nil {
-			err = removeErr
-		}
-	}()
+	defer func() { err = e.cleanup(err) }()
 
 	chunkCount := e.totalSize / uint64(e.options.ChunkSize)
 	if e.totalSize%uint64(e.options.ChunkSize) != 0 {
@@ -155,6 +146,21 @@ func (e *Encoder) Close() (err error) {
 		return err
 	}
 	return writeAll(e.sink, []byte("UBCE"))
+}
+
+// Abort discards buffered plaintext without writing a container.
+func (e *Encoder) Abort() error {
+	if e.closed {
+		return errEncoderClosed
+	}
+	e.closed = true
+	return e.cleanup(nil)
+}
+
+func (e *Encoder) cleanup(err error) error {
+	closeErr := e.spool.Close()
+	removeErr := os.Remove(e.spool.Name())
+	return errors.Join(err, closeErr, removeErr)
 }
 
 func writeAll(writer io.Writer, data []byte) error {

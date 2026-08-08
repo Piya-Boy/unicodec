@@ -14,10 +14,14 @@ const version = "0.1.0"
 const defaultChunkSize = 1 << 20
 
 type commandOptions struct {
-	inputPath  string
-	outputPath string
-	keyFile    string
-	chunkSize  uint64
+	inputPath           string
+	outputPath          string
+	keyFile             string
+	chunkSize           uint64
+	name                string
+	mime                string
+	baseNonce           string
+	unsafeDeterministic bool
 }
 
 func main() {
@@ -25,6 +29,10 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	return runWithIO(args, os.Stdin, stdout, stderr)
+}
+
+func runWithIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		printRootUsage(stderr)
 		return 2
@@ -49,7 +57,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		switch args[1] {
 		case "encode", "decode", "verify", "inspect":
-			return runCommand(args[1], []string{"--help"}, stdout, stderr)
+			return runCommand(args[1], []string{"--help"}, stdin, stdout, stderr)
 		default:
 			_, _ = fmt.Fprintf(stderr, "ubc: unknown command %q\n", args[1])
 			printRootUsage(stderr)
@@ -63,7 +71,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stdout, "ubc %s\n", version)
 		return 0
 	case "encode", "decode", "verify", "inspect":
-		return runCommand(args[0], args[1:], stdout, stderr)
+		return runCommand(args[0], args[1:], stdin, stdout, stderr)
 	default:
 		_, _ = fmt.Fprintf(stderr, "ubc: unknown command %q\n", args[0])
 		printRootUsage(stderr)
@@ -71,8 +79,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-func runCommand(name string, args []string, stdout, stderr io.Writer) int {
-	_, showHelp, err := parseCommandOptions(name, args)
+func runCommand(name string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	options, showHelp, err := parseCommandOptions(name, args)
 	if errors.Is(err, flag.ErrHelp) || showHelp {
 		printCommandUsage(stdout, name)
 		return 0
@@ -83,6 +91,9 @@ func runCommand(name string, args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
+	if name == "encode" {
+		return runEncode(options, stdin, stdout, stderr)
+	}
 	_, _ = fmt.Fprintf(stderr, "ubc %s: not implemented\n", name)
 	return 2
 }
@@ -95,6 +106,12 @@ func parseCommandOptions(name string, args []string) (commandOptions, bool, erro
 	flags.StringVar(&options.outputPath, "out", "-", "output path, or - for stdout")
 	flags.StringVar(&options.keyFile, "key-file", "", "file containing a 32-byte key")
 	flags.Uint64Var(&options.chunkSize, "chunk-size", defaultChunkSize, "plaintext bytes per chunk")
+	if name == "encode" {
+		flags.StringVar(&options.name, "name", "", "filename metadata")
+		flags.StringVar(&options.mime, "mime", "", "MIME type metadata")
+		flags.StringVar(&options.baseNonce, "base-nonce", "", "12-byte hexadecimal nonce (test only)")
+		flags.BoolVar(&options.unsafeDeterministic, "unsafe-deterministic", false, "allow deterministic nonce for testing")
+	}
 	help := flags.Bool("help", false, "show help")
 	flags.BoolVar(help, "h", false, "show help")
 	if err := flags.Parse(args); err != nil {
@@ -135,7 +152,19 @@ Flags:
         file containing a 32-byte key; UBC_KEY may be used instead
   -chunk-size <bytes>
         plaintext bytes per chunk (default %s)
-  -h, -help
-        show help
 `, name, strconv.FormatUint(defaultChunkSize, 10))
+	if name == "encode" {
+		_, _ = fmt.Fprint(output, `  -name <filename>
+        filename metadata
+  -mime <type>
+        MIME type metadata
+  -base-nonce <hex>
+        12-byte hexadecimal nonce (test only)
+  -unsafe-deterministic
+        allow deterministic nonce for testing
+`)
+	}
+	_, _ = fmt.Fprint(output, `  -h, -help
+        show help
+`)
 }
