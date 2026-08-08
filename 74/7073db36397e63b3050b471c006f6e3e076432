@@ -1,0 +1,27 @@
+cli/main_test.go
+  s_7fc993427c7fcf::t_4907751ade52ff 509-531,533-544
+  s_7fc993427c7fcf::t_300b9b738592e3 532
+  s_7fc993427c7fcf::t_55dd527f17bae4 151-152,154
+cli/main.go
+  s_7fc993427c7fcf::t_300b9b738592e3 115-116
+  s_7fc993427c7fcf::t_1c6ad8c09ffbde 105-114,117,271-284
+  s_7fc993427c7fcf::t_839702249adc78 285-286
+docs/ROADMAP.md
+  s_7fc993427c7fcf::t_58b9989362f075 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "747073db36397e63b3050b471c006f6e3e076432",
+  "prompts": {},
+  "sessions": {
+    "s_7fc993427c7fcf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe223-d21e-72e3-b11f-c0d786618d7f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
