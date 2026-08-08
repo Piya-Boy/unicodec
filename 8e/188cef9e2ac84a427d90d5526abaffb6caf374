@@ -1,0 +1,38 @@
+docs/ROADMAP.md
+  s_781a3a6275ac51::t_2c7141a44a237b 35
+cli/main.go
+  s_7fc993427c7fcf::t_37a03204c07915 156,295-349,512
+  s_7fc993427c7fcf::t_319c5fb643fd6f 5,31,120-121,154-155
+  s_7fc993427c7fcf::t_238acc8ecf5abc 294
+  s_781a3a6275ac51::t_77aa630d361b01 513-515
+  s_7fc993427c7fcf::t_3df2faf9f6c5de 511
+cli/main_test.go
+  s_781a3a6275ac51::t_77aa630d361b01 7,10,117-119,541-573,588-599,601-667
+  s_781a3a6275ac51::t_028e497cc04114 11
+  s_781a3a6275ac51::t_a012ddc38bdf3a 600
+  s_781a3a6275ac51::t_a4b6a1cef0d86a 574-587
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8e188cef9e2ac84a427d90d5526abaffb6caf374",
+  "prompts": {},
+  "sessions": {
+    "s_781a3a6275ac51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe254-c6da-7ea1-ad3c-4126d5995d4f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_7fc993427c7fcf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe223-d21e-72e3-b11f-c0d786618d7f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
