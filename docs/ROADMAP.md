@@ -3,6 +3,36 @@
 Phased delivery. The ordering exists to prove cross-language determinism cheaply before
 scaling to many SDKs — porting is only safe once the format is frozen and vectors exist.
 
+This file is the **single source of work**. Agents read it (via prompt.md), do the first
+unchecked task under "Active work", and update its checkbox + status here. Legend:
+`[ ]` todo · `[~]` in progress · `[x]` done (checker-confirmed).
+
+---
+
+## Active work (do these first, top to bottom)
+
+Close the Go/Node API-parity gap found in the crypto review (2026-08-08). Go is missing
+public APIs that docs/API.md and the Node SDK already expose — a cross-language surface
+gap (SECURITY.md §6). No format change; no RFC needed.
+
+- [x] Go SDK: `Verify(source, opts) VerifyReport` — drains decoder without releasing
+      plaintext; reports first stable error id. Added sdk/go/verify.go (human-reviewed).
+- [ ] Go SDK: `Inspect(source) ContainerInfo` — header + metadata only, no payload read,
+      no plaintext. Match docs/API.md §2.5 and Node `inspect()`.
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] Go SDK: `DecodeBytes(container, opts) ([]byte, []MetadataEntry, error)` one-shot —
+      drain NewDecoder to EOF; reuse Decoder (no duplicated crypto); byte-identical
+      round-trip; parity with Node `decodeBytes()`.
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] Sync docs/API.md and docs/SDK.md to the REAL Go surface (Encode*/Verify/Inspect/
+      DecodeBytes/NewEncoder/NewDecoder). No claimed-but-absent APIs.
+      Maker: gpt-5.6-luna · Checker: gpt-5.6-sol
+- [ ] Add Go conformance test: Inspect and DecodeBytes agree with the streaming Decoder
+      and the shared vectors.
+
+When "Active work" is empty and Go/Node surfaces match, merge feature/node-sdk-conformance
+to main (human gate), then start Phase 2.
+
 ---
 
 ## Phase 0 — Specification (this repo, now)
@@ -21,9 +51,10 @@ Exit criteria: spec reviewed, no open format questions, RFC process in place.
 - [x] Node.js SDK
 - [x] Conformance: both SDKs pass all vectors byte-exact
 - [x] Cross-decode: Go↔Node round-trip
+- [~] Go/Node public-API parity (see "Active work" — Inspect/DecodeBytes pending)
 
-Exit criteria: two SDKs produce byte-identical output and cross-decode. This is the
-proof that the format is language-agnostic.
+Exit criteria: two SDKs produce byte-identical output, cross-decode, AND expose equivalent
+public APIs. This is the proof that the format is language-agnostic.
 
 ## Phase 2 — CLI
 

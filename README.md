@@ -42,7 +42,7 @@ consistent developer experience. See [docs/PRD.md](./docs/PRD.md).
 
 This project is built via [loop engineering](https://addyosmani.com/blog/loop-engineering/):
 agents implement, test, and verify against shared vectors with a strict maker ≠ checker
-split. See [AGENTS.md](./AGENTS.md) and [docs/AGENT_STATE.md](./docs/AGENT_STATE.md).
+split. See [AGENTS.md](./AGENTS.md) and [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 ## License
 

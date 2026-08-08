@@ -24,27 +24,41 @@ When unsure about bytes/algorithms/errors, SPEC.md wins. Never invent format or 
 4. **Fail closed, read the code.** Automation does not remove comprehension: every change is
    diff-reviewed by the checker against SPEC.md and the relevant `docs/*`.
 5. **Isolate work.** Independent tasks run in separate git worktrees to avoid file conflicts.
-6. **Persist state.** Progress lives in `docs/AGENT_STATE.md` so a loop resumes across runs.
+6. **Persist state.** Progress lives in `docs/ROADMAP.md` so a loop resumes across runs.
 
 ---
 
 ## 2. The build loop
 
-Each iteration targets one **task** (a checkbox in ROADMAP.md / AGENT_STATE.md).
+Each iteration targets one **task** (a checkbox under "Active work" or a Phase in docs/ROADMAP.md).
 
 ```
 loop(task):
-  1. PLAN    — read SPEC.md + relevant docs; write/confirm the task's acceptance criteria
-  2. MAKE    — implement in an isolated worktree (maker model)
-  3. TEST    — run the task's tests + conformance vectors locally
-  4. CHECK   — fresh checker model reviews diff vs SPEC/docs, runs vectors independently
-  5. DECIDE  — CHECK passes goal criteria? → merge, mark done, next task
+  1. PLAN     — read SPEC.md + relevant docs; write/confirm the task's acceptance criteria
+  2. MAKE     — implement in an isolated worktree (maker model)
+  3. TEST     — run the task's tests + conformance vectors locally
+               fails? → back to MAKE (same task), iterate
+  4. CHECK    — fresh checker model reviews diff vs SPEC/docs, runs vectors independently
                fails? → feed findings back to MAKE (same task), iterate
-  6. RECORD  — update docs/AGENT_STATE.md (done / next / open issues)
+  5. SECURITY — run a Codex security review of the change:
+                  codex review --uncommitted "Security review: crypto correctness,
+                  fail-closed decoding, nonce/AAD handling, DoS bounds on untrusted
+                  lengths, injection, unsafe parsing. Flag anything exploitable."
+               any real finding? → back to MAKE (same task), fix, re-run TEST+CHECK+SECURITY
+  6. RECORD   — update docs/ROADMAP.md (tick the task, keep its status line current)
+  7. COMMIT   — Conventional Commit on the feature branch, then push:
+                  git add -A && git commit -m "<type>: <task>" && git push
+               (never main; no secrets; no Co-Authored-By)
+  8. NEXT     — start the first remaining unchecked task; repeat until none remain
 ```
 
-Stopping condition per task = its **goal criteria** (see §3). The loop for a *phase*
-(ROADMAP.md) ends when every task's goal passes and cross-cutting gates (§5) are green.
+Order is strict: TEST must pass before CHECK, CHECK before SECURITY, SECURITY before
+COMMIT. A failure at any gate sends the task back to MAKE — never commit a task that has
+not passed all three of TEST, CHECK, and SECURITY.
+
+Stopping condition per task = its **goal criteria** (see §3). The loop keeps going,
+committing and pushing each passed task, until "Active work" is empty and the current
+Phase's exit gate (§5) is green.
 
 ---
 
@@ -111,21 +125,21 @@ Before any phase is marked complete:
 
 ---
 
-## 7. State file: docs/AGENT_STATE.md
+## 7. State file: docs/ROADMAP.md
 
-The loop reads/writes this each iteration. Shape:
+The loop reads/writes docs/ROADMAP.md each iteration — it is the single source of work and
+the shared memory that lets a loop resume. The "Active work" section is the live task queue;
+Phases hold longer-range work. Conventions:
 
 ```
-## Current phase: <n>
-## In progress
-- [ ] <task> — worktree/branch — maker model — status
-## Done
-- [x] <task> — checker-confirmed <date>
-## Open issues / blockers
-- <issue> — needs <decision/model/human>
-## Next
-- <task queue in order>
+## Active work (do these first, top to bottom)
+- [ ] <task> — Maker: <model> · Checker: <model>
+- [~] <task in progress> — status
+- [x] <done task> — (checker-confirmed <date>)
 ```
+
+Legend: `[ ]` todo · `[~]` in progress · `[x]` done. After each task, tick its box and keep
+its status line accurate. Never let ROADMAP.md drift from reality.
 
 Keep it current; it is the memory that lets the loop resume without re-deriving context.
 
