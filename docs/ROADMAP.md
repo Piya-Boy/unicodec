@@ -17,7 +17,7 @@ never fully buffered. Exit codes: `0` ok, `1` verification/format failure (print
 error id to stderr), `2` usage error. Keys come from a file or env var, never a CLI flag
 value (avoid leaking keys in shell history / process list).
 
-- [ ] CLI scaffold: `cli/` package, arg parsing, `ubc <verb> [flags]`, `--help`, version.
+- [x] CLI scaffold: `cli/` package, arg parsing, `ubc <verb> [flags]`, `--help`, version. (checker-confirmed 2026-08-08)
       Global flags: `-in <path|->`, `-out <path|->`, `-key-file <path>` / `UBC_KEY` env,
       `-chunk-size`. Goal: `ubc --help` and each subcommand's help render; usage error = exit 2.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
