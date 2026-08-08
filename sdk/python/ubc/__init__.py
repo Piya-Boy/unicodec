@@ -14,10 +14,26 @@ from .header import (
     parse_header,
 )
 from .metadata import MetadataEntry, encode_metadata, parse_metadata
+from .payload import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_MAX_CHUNK_COUNT,
+    DEFAULT_MAX_CHUNK_LEN,
+    DEFAULT_MAX_META_BYTES,
+    DEFAULT_MAX_TOTAL_SIZE,
+    DecodeOptions,
+    decode_plain,
+    encode_plain,
+)
 
 __all__ = [
     "AEAD_AES_256_GCM",
     "AEAD_NONE",
+    "DEFAULT_CHUNK_SIZE",
+    "DEFAULT_MAX_CHUNK_COUNT",
+    "DEFAULT_MAX_CHUNK_LEN",
+    "DEFAULT_MAX_META_BYTES",
+    "DEFAULT_MAX_TOTAL_SIZE",
+    "DecodeOptions",
     "ErrorCode",
     "FLAG_ENCRYPTED",
     "FLAG_HAS_METADATA",
@@ -29,6 +45,8 @@ __all__ = [
     "UbcError",
     "VERSION",
     "encode_metadata",
+    "encode_plain",
+    "decode_plain",
     "parse_header",
     "parse_metadata",
 ]

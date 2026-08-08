@@ -34,12 +34,20 @@ def encode_metadata(entries: Iterable[MetadataEntry]) -> bytes:
     return struct.pack("<I", len(body)) + bytes(body)
 
 
-def parse_metadata(data: bytes | bytearray | memoryview) -> tuple[list[MetadataEntry], int]:
+def parse_metadata(
+    data: bytes | bytearray | memoryview,
+    *,
+    max_bytes: int | None = None,
+) -> tuple[list[MetadataEntry], int]:
     view = memoryview(data)
     if len(view) < 4:
         raise UbcError(ErrorCode.META_MALFORMED)
     (metadata_length,) = struct.unpack("<I", view[:4])
-    if metadata_length == 0 or metadata_length > len(view) - 4:
+    if (
+        metadata_length == 0
+        or (max_bytes is not None and metadata_length > max_bytes)
+        or metadata_length > len(view) - 4
+    ):
         raise UbcError(ErrorCode.META_MALFORMED)
 
     end = 4 + metadata_length
