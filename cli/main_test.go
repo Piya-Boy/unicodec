@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -111,6 +114,9 @@ func TestSubcommandHelpRenders(t *testing.T) {
 			if stderr.Len() != 0 {
 				t.Fatalf("stderr = %q", stderr.String())
 			}
+			if command == "inspect" && !strings.Contains(stdout.String(), "-json") {
+				t.Fatalf("inspect help does not describe -json: %q", stdout.String())
+			}
 		})
 	}
 }
@@ -143,16 +149,6 @@ func TestCommandOptionsAcceptGlobalFlags(t *testing.T) {
 	}
 	if options.inputPath != "input" || options.outputPath != "output" || options.keyFile != "key.bin" || options.chunkSize != 4096 {
 		t.Fatalf("options = %#v", options)
-	}
-}
-
-func TestUnimplementedCommandDoesNotReportSuccess(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	if code := run([]string{"inspect", "-in", "input"}, &stdout, &stderr); code != 2 {
-		t.Fatalf("inspect exit code = %d", code)
-	}
-	if stdout.Len() != 0 || stderr.String() != "ubc inspect: not implemented\n" {
-		t.Fatalf("stdout = %q, stderr = %q", stdout.String(), stderr.String())
 	}
 }
 
@@ -541,4 +537,131 @@ func TestVerifyRejectsPlaintextOutputPath(t *testing.T) {
 	if code := run([]string{"verify", "-out", "output.bin"}, &stdout, &stderr); code != 2 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
+}
+
+func TestInspectSharedPositiveVectors(t *testing.T) {
+	for _, vector := range loadCLIVectors(t) {
+		if vector.ExpectError != "" {
+			continue
+		}
+		t.Run(vector.ID, func(t *testing.T) {
+			container, err := os.ReadFile(filepath.Join("..", "spec", "vectors", vector.Expected))
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, err := ubc.Inspect(bytes.NewReader(container))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var stdout, stderr bytes.Buffer
+			if code := runWithInput([]string{"inspect", "-json"}, bytes.NewReader(container), &stdout, &stderr); code != 0 {
+				t.Fatalf("exit code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+			}
+			var got inspectOutput
+			if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, newInspectOutput(want)) {
+				t.Fatalf("JSON output = %#v, want %#v", got, newInspectOutput(want))
+			}
+
+			stdout.Reset()
+			stderr.Reset()
+			if code := runWithInput([]string{"inspect"}, bytes.NewReader(container), &stdout, &stderr); code != 0 {
+				t.Fatalf("text exit code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+			}
+			var wantText strings.Builder
+			wantText.WriteString("version: " + strconv.Itoa(int(want.Version)) + "\n")
+			wantText.WriteString("encrypted: " + strconv.FormatBool(want.Flags.Encrypted) + "\n")
+			wantText.WriteString("has_metadata: " + strconv.FormatBool(want.Flags.HasMetadata) + "\n")
+			wantText.WriteString("hash_algo: " + strconv.Itoa(int(want.HashAlgo)) + "\n")
+			wantText.WriteString("aead_algo: " + strconv.Itoa(int(want.AEADAlgo)) + "\n")
+			wantText.WriteString("chunk_size: " + strconv.FormatUint(uint64(want.ChunkSize), 10) + "\n")
+			wantText.WriteString("chunk_count: " + strconv.FormatUint(want.ChunkCount, 10) + "\n")
+			wantText.WriteString("total_size: " + strconv.FormatUint(want.TotalSize, 10) + "\n")
+			for _, entry := range want.Metadata {
+				wantText.WriteString("metadata 0x" + hex.EncodeToString([]byte{byte(entry.Tag >> 8), byte(entry.Tag)}) + ": " + hex.EncodeToString(entry.Value) + "\n")
+			}
+			if stdout.String() != wantText.String() {
+				t.Fatalf("text output = %q, want %q", stdout.String(), wantText.String())
+			}
+		})
+	}
+}
+
+func TestInspectRejectsInvalidPrefixes(t *testing.T) {
+	invalidPrefixes := map[string]bool{
+		"negative-bad-magic":                      true,
+		"negative-version-two":                    true,
+		"negative-hash-algo":                      true,
+		"negative-aead-algo":                      true,
+		"negative-reserved-flag":                  true,
+		"negative-inconsistent-encryption":        true,
+		"negative-meta-out-of-order":              true,
+		"negative-meta-duplicate":                 true,
+		"negative-meta-overrun":                   true,
+		"negative-zero-chunk-size":                true,
+		"negative-empty-metadata":                 true,
+		"negative-encrypted-zero-chunk-size":      true,
+		"negative-encrypted-oversized-chunk-size": true,
+		"negative-encrypted-reserved-metadata":    true,
+		"negative-reserved-metadata":              true,
+	}
+	for _, vector := range loadCLIVectors(t) {
+		if !invalidPrefixes[vector.ID] {
+			continue
+		}
+		t.Run(vector.ID, func(t *testing.T) {
+			container, err := os.ReadFile(filepath.Join("..", "spec", "vectors", vector.Expected))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := runWithInput([]string{"inspect"}, bytes.NewReader(container), &stdout, &stderr); code != 1 || stdout.Len() != 0 || stderr.String() != vector.ExpectError+"\n" {
+				t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestInspectDoesNotReadPayload(t *testing.T) {
+	container, err := os.ReadFile(filepath.Join("..", "spec", "vectors", "expected", "encrypted-metadata.ubc"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadataLength := int(uint32(container[ubc.HeaderSize]) | uint32(container[ubc.HeaderSize+1])<<8 | uint32(container[ubc.HeaderSize+2])<<16 | uint32(container[ubc.HeaderSize+3])<<24)
+	reader := &prefixOnlyReader{data: container, limit: ubc.HeaderSize + 4 + metadataLength}
+	var stdout, stderr bytes.Buffer
+	if code := runWithInput([]string{"inspect", "-json"}, reader, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+	}
+	if reader.read != reader.limit {
+		t.Fatalf("read %d bytes, want %d", reader.read, reader.limit)
+	}
+}
+
+func TestInspectRejectsOutputPath(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"inspect", "-out", "output.txt"}, &stdout, &stderr); code != 2 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+}
+
+type prefixOnlyReader struct {
+	data        []byte
+	limit, read int
+}
+
+func (reader *prefixOnlyReader) Read(buffer []byte) (int, error) {
+	if reader.read >= reader.limit {
+		return 0, errors.New("inspect attempted to read payload")
+	}
+	remaining := reader.limit - reader.read
+	if len(buffer) > remaining {
+		buffer = buffer[:remaining]
+	}
+	n := copy(buffer, reader.data[reader.read:reader.read+len(buffer)])
+	reader.read += n
+	return n, nil
 }

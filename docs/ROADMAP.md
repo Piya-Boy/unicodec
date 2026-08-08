@@ -32,7 +32,7 @@ value (avoid leaking keys in shell history / process list).
 - [x] `ubc verify` — integrity/auth only, never writes plaintext. (checker-confirmed 2026-08-09) Goal: prints ok/fail +
       error id; exit 0/1; matches Go `Verify` on all vectors.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] `ubc inspect` — print header + metadata (human text + `-json`), no payload read,
+- [x] `ubc inspect` — print header + metadata (human text + `-json`), no payload read, (checker-confirmed 2026-08-09)
       no key. Goal: fields match Go `Inspect`/ContainerInfo across vectors.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
 - [ ] CLI conformance tests: drive the binary over the shared vectors (encode/decode/

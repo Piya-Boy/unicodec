@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -27,6 +28,7 @@ type commandOptions struct {
 	name       string
 	mime       string
 	baseNonce  string
+	json       bool
 }
 
 func main() {
@@ -115,6 +117,8 @@ func runCommand(name string, args []string, stdin io.Reader, stdout, stderr io.W
 		_, _ = fmt.Fprintln(stdout, "fail")
 		_, _ = fmt.Fprintln(stderr, report.Error)
 		return 1
+	case "inspect":
+		commandErr = runInspect(options, stdin, stdout)
 	default:
 		_, _ = fmt.Fprintf(stderr, "ubc %s: not implemented\n", name)
 		return 2
@@ -146,6 +150,9 @@ func parseCommandOptions(name string, args []string) (commandOptions, bool, erro
 		flags.StringVar(&options.name, "name", "", "filename metadata")
 		flags.StringVar(&options.mime, "mime", "", "MIME type metadata")
 		flags.StringVar(&options.baseNonce, "base-nonce", "", "fixed nonce for conformance testing only")
+	}
+	if name == "inspect" {
+		flags.BoolVar(&options.json, "json", false, "print JSON")
 	}
 	help := flags.Bool("help", false, "show help")
 	flags.BoolVar(help, "h", false, "show help")
@@ -282,6 +289,62 @@ func runVerify(options commandOptions, stdin io.Reader) (ubc.VerifyReport, error
 	}
 	defer func() { _ = closeInput() }()
 	return ubc.Verify(input, ubc.DecodeOptions{Key: key}), nil
+}
+
+func runInspect(options commandOptions, stdin io.Reader, stdout io.Writer) error {
+	if options.outputPath != "-" {
+		return newUsageError("inspect writes to stdout; omit -out")
+	}
+	input, closeInput, err := openInput(options.inputPath, stdin)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = closeInput() }()
+	info, err := ubc.Inspect(input)
+	if err != nil {
+		return err
+	}
+	if options.json {
+		return json.NewEncoder(stdout).Encode(newInspectOutput(info))
+	}
+	_, err = fmt.Fprintf(stdout, "version: %d\nencrypted: %t\nhas_metadata: %t\nhash_algo: %d\naead_algo: %d\nchunk_size: %d\nchunk_count: %d\ntotal_size: %d\n", info.Version, info.Flags.Encrypted, info.Flags.HasMetadata, info.HashAlgo, info.AEADAlgo, info.ChunkSize, info.ChunkCount, info.TotalSize)
+	if err != nil {
+		return err
+	}
+	for _, entry := range info.Metadata {
+		if _, err := fmt.Fprintf(stdout, "metadata 0x%04x: %x\n", entry.Tag, entry.Value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type inspectOutput struct {
+	Version    uint8  `json:"version"`
+	Encrypted  bool   `json:"encrypted"`
+	HasMeta    bool   `json:"hasMetadata"`
+	HashAlgo   uint8  `json:"hashAlgo"`
+	AEADAlgo   uint8  `json:"aeadAlgo"`
+	ChunkSize  uint32 `json:"chunkSize"`
+	ChunkCount uint64 `json:"chunkCount"`
+	TotalSize  uint64 `json:"totalSize"`
+	Metadata   []struct {
+		Tag      uint16 `json:"tag"`
+		ValueHex string `json:"valueHex"`
+	} `json:"metadata"`
+}
+
+func newInspectOutput(info ubc.ContainerInfo) inspectOutput {
+	output := inspectOutput{Version: info.Version, Encrypted: info.Flags.Encrypted, HasMeta: info.Flags.HasMetadata, HashAlgo: info.HashAlgo, AEADAlgo: info.AEADAlgo, ChunkSize: info.ChunkSize, ChunkCount: info.ChunkCount, TotalSize: info.TotalSize}
+	output.Metadata = make([]struct {
+		Tag      uint16 `json:"tag"`
+		ValueHex string `json:"valueHex"`
+	}, len(info.Metadata))
+	for i, entry := range info.Metadata {
+		output.Metadata[i].Tag = entry.Tag
+		output.Metadata[i].ValueHex = hex.EncodeToString(entry.Value)
+	}
+	return output
 }
 
 func loadKey(keyFile string) ([]byte, error) {
@@ -445,6 +508,11 @@ Flags:
         MIME type metadata
   -base-nonce <hex>
         fixed 12-byte nonce for conformance testing only
+`)
+	}
+	if name == "inspect" {
+		_, _ = fmt.Fprint(output, `  -json
+        print JSON
 `)
 	}
 	_, _ = fmt.Fprint(output, `  -h, -help
