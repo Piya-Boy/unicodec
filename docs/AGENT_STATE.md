@@ -38,11 +38,17 @@ resumes across runs without re-deriving context. See [AGENTS.md](../AGENTS.md) f
 - [x] Git repository initialized with initial spec/docs commit
 
 ## Open issues / blockers
-- Freeze format v1 requires final human review of `spec/SPEC.md` before Phase 2 starts.
+- [!] Freeze format v1 — human decision required before Phase 2:
+  - `root_hash` is unkeyed, while AES-GCM AAD covers `header_bytes || le64(i)` but not
+    metadata. An attacker can alter encrypted metadata, recompute the root hash, and pass
+    verification; an encrypted empty container also has no AEAD operation that confirms
+    the supplied key. Resolve through an RFC/spec+vector change before freezing.
+  - Clarify the canonical accept/reject grammar for an empty metadata block, trailing bytes,
+    and when streaming plaintext may be released relative to final root verification.
 
 ## Next (ordered)
 - [ ] Freeze format v1 — final human review of SPEC.md; no byte-layout changes after this
-      without an RFC. Goal: spec reviewed, zero open format questions.
+      without an RFC. Blocked by the recorded authentication and grammar decisions.
 
 ---
 
