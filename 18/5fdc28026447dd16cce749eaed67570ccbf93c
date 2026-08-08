@@ -1,0 +1,32 @@
+cli/main_test.go
+  s_fb51cbc651e104::t_7243b33be5a671 1-46,50-64,66-73
+  s_fb51cbc651e104::t_fe4d5b61fad36a 47
+  s_fb51cbc651e104::t_8e5d1b2f5b29ac 65,74-82
+  s_fb51cbc651e104::t_2f9da986ae6f0d 48-49
+docs/ROADMAP.md
+  s_fb51cbc651e104::t_416aec0bfad8c5 20
+cli/main.go
+  s_fb51cbc651e104::t_7243b33be5a671 1-16,18,21-33,42-45,58-74,76-85,88-89,91-141
+  s_fb51cbc651e104::t_8f3cb1fd58a1a4 17,19-20
+  s_fb51cbc651e104::t_8e5d1b2f5b29ac 75,86-87,90
+  s_fb51cbc651e104::t_2f9da986ae6f0d 34-41,47-54
+  s_fb51cbc651e104::t_fe4d5b61fad36a 46,55-57
+.gitattributes
+  s_fb51cbc651e104::t_4bff5409ae1dfd 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "185fdc28026447dd16cce749eaed67570ccbf93c",
+  "prompts": {},
+  "sessions": {
+    "s_fb51cbc651e104": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1e3-3fdb-7240-9c6d-011c4ad954d5",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
