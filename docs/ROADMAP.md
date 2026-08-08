@@ -21,7 +21,7 @@ value (avoid leaking keys in shell history / process list).
       Global flags: `-in <path|->`, `-out <path|->`, `-key-file <path>` / `UBC_KEY` env,
       `-chunk-size`. Goal: `ubc --help` and each subcommand's help render; usage error = exit 2.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] `ubc encode` — stream stdin/file → container; optional metadata (`-name`, `-mime`);
+- [x] `ubc encode` — stream stdin/file → container; optional metadata (`-name`, `-mime`); (checker-confirmed 2026-08-08)
       encrypt when a key is provided. Goal: output byte-identical to the Go SDK for the
       same input+options; matches encrypted vectors when `-base-nonce` is fixed (test-only).
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
