@@ -1,0 +1,36 @@
+docs/API.md
+  s_a540ee2e2cdd88::t_c8a5cf81366734 3-7,13-14,44,71,78-79,83-86,101-126
+  s_a540ee2e2cdd88::t_65c93a003a9d02 127
+docs/ROADMAP.md
+  s_979a62fa9b30eb::t_bf03dadf1a7712 27,29-31,54
+docs/SDK.md
+  s_a540ee2e2cdd88::t_c8a5cf81366734 26-32,36,42-43,50-51,55-69
+  s_a540ee2e2cdd88::t_1d50e7edf88528 97-109
+  s_a540ee2e2cdd88::t_865861d37f68ac 78
+  s_a540ee2e2cdd88::t_0181c36dffec28 70
+  s_a540ee2e2cdd88::t_533fd7790c3630 110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "7c44dc7caa60abea0fd021aac4d43bb90cd45e96",
+  "prompts": {},
+  "sessions": {
+    "s_979a62fa9b30eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe127-a91a-7133-8e49-dd5b42adf542",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_a540ee2e2cdd88": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1c0-b04c-7fe1-89bf-fa621b78af1b",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
