@@ -53,7 +53,9 @@ the header, metadata, and the concatenation of chunk hashes.
 ```
 h_i      = SHA-256(chunk_i.data)          # data = on-disk bytes (ciphertext+tag if encrypted)
 leaf_cat = h_0 || h_1 || ... || h_(N-1)   # empty when N = 0
-root     = SHA-256(header_bytes || meta_region || leaf_cat)
+root_input = header_bytes || meta_region || leaf_cat
+root     = SHA-256(root_input)                    # plain mode
+root     = HMAC-SHA-256(root_key, root_input)     # encrypted mode
 ```
 
 Why this shape:
@@ -71,7 +73,8 @@ Why **not** a full binary Merkle tree in v1:
   ambiguities. A full tree can be introduced later behind a `version` bump.
 
 Hashing over `data` (post-encryption bytes) rather than plaintext lets a reader verify
-the container's integrity without holding the key — useful for storage/transit checks.
+plain-container integrity without holding the key. Encrypted roots deliberately require
+the key, so they provide active-tamper authentication (including for empty payloads).
 
 ---
 
@@ -81,7 +84,7 @@ When `encrypted = 1`, each chunk is sealed independently:
 
 ```
 nonce_i = base_nonce XOR le96(i)          # 12-byte LE index XORed into base nonce
-aad_i   = header_bytes || le64(i)         # binds chunk to header + position
+aad_i   = header_bytes || SHA-256(meta_region) || le64(i)
 ct_i, tag_i = AES_256_GCM_Seal(key, nonce_i, aad_i, plaintext_i)
 data_i  = ct_i || tag_i                   # tag is 16 bytes
 ```
@@ -93,8 +96,9 @@ Design decisions:
 - **Nonce = base XOR index** gives a unique nonce per chunk without storing 12 bytes per
   chunk. `base_nonce` is random per container (CSPRNG); reusing a (key, nonce) pair in
   GCM is catastrophic, so `base_nonce` MUST NOT be reused across containers under one key.
-- **AAD binds header + index**, preventing chunk reordering, truncation-as-valid, and
-  header tampering from producing a container that still authenticates.
+- **AAD binds header + metadata + index**, preventing chunk reordering, metadata
+  substitution, truncation-as-valid, and header tampering from producing a container
+  that still authenticates.
 
 Key management (derivation, passwords, storage, rotation) is deliberately **out of scope**
 for v1. The SDK takes a raw 32-byte key from the caller. See SECURITY.md.
@@ -112,7 +116,8 @@ for v1. The SDK takes a raw 32-byte key from the caller. See SECURITY.md.
      if encrypted: data_i = seal(i, plaintext_i); else data_i = plaintext_i
      h_i = SHA-256(data_i)
      emit [clen=len(data_i)][data_i]
-5. root = SHA-256(header_bytes || meta_region || h_0..h_{N-1})
+5. root_input = header_bytes || meta_region || h_0..h_{N-1}; use SHA-256 in plain mode
+   or HMAC-SHA-256 with the RFC 5869-derived root key in encrypted mode
 6. emit footer [root][UBCE]
 ```
 

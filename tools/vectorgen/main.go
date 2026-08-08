@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -49,8 +50,16 @@ type vector struct {
 }
 
 type manifest struct {
-	Version int      `json:"version"`
-	Vectors []vector `json:"vectors"`
+	Version            int                 `json:"version"`
+	CryptoKnownAnswers []cryptoKnownAnswer `json:"cryptoKnownAnswers"`
+	Vectors            []vector            `json:"vectors"`
+}
+
+type cryptoKnownAnswer struct {
+	ID        string `json:"id"`
+	Key       string `json:"key"`
+	BaseNonce string `json:"baseNonce"`
+	RootKey   string `json:"rootKey"`
 }
 
 type artifact struct {
@@ -166,7 +175,7 @@ func buildArtifacts(root string) ([]artifact, error) {
 	}
 	artifacts = append(artifacts, negatives.artifacts...)
 	vectors := append(positive, negatives.vectors...)
-	manifestBytes, err := json.MarshalIndent(manifest{Version: 1, Vectors: vectors}, "", "  ")
+	manifestBytes, err := json.MarshalIndent(manifest{Version: 1, CryptoKnownAnswers: []cryptoKnownAnswer{{ID: "encrypted-root-key-fixed", Key: keyHex, BaseNonce: nonceHex, RootKey: hex.EncodeToString(rootKey(key, nonce))}}, Vectors: vectors}, "", "  ")
 	if err != nil {
 		return nil, err
 	}
@@ -187,6 +196,8 @@ func buildNegatives(root string, positives []vector, artifacts []artifact) (nega
 	}
 	plain := append([]byte(nil), byExpected["expected/plain-one-byte.ubc"]...)
 	encrypted := append([]byte(nil), byExpected["expected/encrypted-one-byte.ubc"]...)
+	encryptedEmpty := append([]byte(nil), byExpected["expected/encrypted-empty.ubc"]...)
+	encryptedMetadata := append([]byte(nil), byExpected["expected/encrypted-metadata.ubc"]...)
 	metadata := append([]byte(nil), byExpected["expected/plain-metadata.ubc"]...)
 	if len(plain) < headerSize+4+1+footerSize || len(encrypted) < headerSize+4+17+footerSize {
 		return negativeResult{}, errors.New("positive vector unexpectedly short")
@@ -198,7 +209,7 @@ func buildNegatives(root string, positives []vector, artifacts []artifact) (nega
 	}{
 		{"negative-bad-magic", "Header magic is invalid", "ERR_BAD_MAGIC", replace(plain, 0, 0x00)},
 		{"negative-version-two", "Header version is unsupported", "ERR_UNSUPPORTED_VER", replace(plain, 4, 0x02)},
-		{"negative-hash-algo", "Header hash algorithm is unsupported", "ERR_UNSUPPORTED_ALGO", replace(plain, 6, 0x01)},
+		{"negative-hash-algo", "Header hash algorithm is unsupported", "ERR_UNSUPPORTED_ALGO", replace(plain, 6, 0x02)},
 		{"negative-aead-algo", "Header AEAD algorithm is unsupported", "ERR_UNSUPPORTED_ALGO", replace(plain, 7, 0x02)},
 		{"negative-reserved-flag", "Reserved header flag bit is set", "ERR_RESERVED_BITS", replace(plain, 5, 0x80)},
 		{"negative-inconsistent-encryption", "Encrypted flag conflicts with no AEAD", "ERR_RESERVED_BITS", replace(plain, 5, 0x01)},
@@ -210,13 +221,28 @@ func buildNegatives(root string, positives []vector, artifacts []artifact) (nega
 		{"negative-meta-duplicate", "Metadata has a duplicate tag", "ERR_META_MALFORMED", duplicateMetadataTag(metadata)},
 		{"negative-meta-overrun", "Metadata TLV length overruns metadata region", "ERR_META_MALFORMED", metadataLengthOverrun(metadata)},
 		{"negative-oversized-clen", "Chunk length exceeds bytes remaining", "ERR_TRUNCATED", oversizedChunkLength(plain)},
+		{"negative-zero-chunk-size", "Header chunk size is zero", "ERR_RESERVED_BITS", zeroChunkSize(plain)},
+		{"negative-empty-metadata", "Metadata flag carries an empty metadata block", "ERR_META_MALFORMED", emptyMetadataBlock(plain)},
+		{"negative-trailing-data", "Container has bytes after its footer", "ERR_TRAILING_DATA", append(append([]byte(nil), plain...), 0x00)},
+		{"negative-encrypted-zero-chunk-size", "Encrypted header chunk size is zero", "ERR_RESERVED_BITS", zeroChunkSize(encrypted)},
+		{"negative-encrypted-oversized-chunk-size", "Encrypted header chunk size cannot fit its tag", "ERR_RESERVED_BITS", oversizedEncryptedChunkSize(encrypted)},
+		{"negative-encrypted-short-clen", "Encrypted chunk body is shorter than its GCM tag", "ERR_CHUNK_AUTH", encryptedShortChunk(encrypted)},
+		{"negative-encrypted-metadata-tamper", "Valid encrypted metadata change invalidates chunk AAD", "ERR_CHUNK_AUTH", tamperMetadata(encryptedMetadata)},
+		{"negative-encrypted-reserved-metadata", "Malformed encrypted metadata precedes missing-key failure", "ERR_META_MALFORMED", malformedReservedMetadata(encryptedMetadata)},
+		{"negative-encrypted-cap-missing-key", "Missing key precedes encrypted payload caps", "ERR_MISSING_KEY", oversizedChunkCount(encrypted)},
+		{"negative-reserved-metadata", "Reserved metadata value is invalid UTF-8", "ERR_META_MALFORMED", malformedReservedMetadata(metadata)},
+		{"negative-encrypted-empty-wrong-key", "Encrypted empty container rejects a wrong key", "ERR_ROOT_MISMATCH", encryptedEmpty},
 	}
 	result := negativeResult{}
 	for _, item := range items {
 		expected := filepath.ToSlash(filepath.Join("expected", item.id+".ubc"))
 		result.artifacts = append(result.artifacts, artifact{filepath.Join(root, expected), item.data})
 		code := item.code
-		result.vectors = append(result.vectors, vector{ID: item.id, Description: item.description, Expected: expected, ExpectedSHA256: sha256Hex(item.data), ExpectError: &code})
+		var vectorOptions *options
+		if item.id == "negative-encrypted-empty-wrong-key" {
+			vectorOptions = &options{Key: "ff0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}
+		}
+		result.vectors = append(result.vectors, vector{ID: item.id, Description: item.description, Options: vectorOptions, Expected: expected, ExpectedSHA256: sha256Hex(item.data), ExpectError: &code})
 	}
 	return result, nil
 }
@@ -234,7 +260,7 @@ func encode(input []byte, chunkSize uint32, key, baseNonce []byte, encrypted boo
 	copy(header[:4], "UBC1")
 	header[4] = 1
 	if encrypted {
-		header[5], header[7] = 1, 1
+		header[5], header[6], header[7] = 1, 1, 1
 		copy(header[28:], baseNonce)
 	}
 	if len(meta) > 0 {
@@ -256,12 +282,13 @@ func encode(input []byte, chunkSize uint32, key, baseNonce []byte, encrypted boo
 	}
 	output := append([]byte(nil), header...)
 	output = append(output, meta...)
+	metadataDigest := sha256.Sum256(meta)
 	leaves := make([]byte, 0, chunkCount*sha256.Size)
 	for index, offset := uint64(0), 0; offset < len(input); index, offset = index+1, offset+int(chunkSize) {
 		end := min(offset+int(chunkSize), len(input))
 		data := input[offset:end]
 		if encrypted {
-			data = aead.Seal(nil, chunkNonce(baseNonce, index), data, appendIndex(header, index))
+			data = aead.Seal(nil, chunkNonce(baseNonce, index), data, appendIndex(header, metadataDigest[:], index))
 		}
 		length := make([]byte, 4)
 		binary.LittleEndian.PutUint32(length, uint32(len(data)))
@@ -270,9 +297,17 @@ func encode(input []byte, chunkSize uint32, key, baseNonce []byte, encrypted boo
 		hash := sha256.Sum256(data)
 		leaves = append(leaves, hash[:]...)
 	}
-	rootInput := append(append(append([]byte(nil), header...), meta...), leaves...)
-	root := sha256.Sum256(rootInput)
-	output = append(output, root[:]...)
+	if encrypted {
+		root := hmac.New(sha256.New, rootKey(key, baseNonce))
+		_, _ = root.Write(header)
+		_, _ = root.Write(meta)
+		_, _ = root.Write(leaves)
+		output = append(output, root.Sum(nil)...)
+	} else {
+		rootInput := append(append(append([]byte(nil), header...), meta...), leaves...)
+		root := sha256.Sum256(rootInput)
+		output = append(output, root[:]...)
+	}
 	output = append(output, "UBCE"...)
 	return output, nil
 }
@@ -302,8 +337,20 @@ func encodeMetadata(entries []metadataEntry) ([]byte, error) {
 	return append(prefix, body...), nil
 }
 
-func appendIndex(header []byte, index uint64) []byte {
+var rootInfo = []byte("UBC1 root authentication")
+
+func rootKey(key, baseNonce []byte) []byte {
+	prk := hmac.New(sha256.New, baseNonce)
+	_, _ = prk.Write(key)
+	expand := hmac.New(sha256.New, prk.Sum(nil))
+	_, _ = expand.Write(rootInfo)
+	_, _ = expand.Write([]byte{1})
+	return expand.Sum(nil)
+}
+
+func appendIndex(header, metadataDigest []byte, index uint64) []byte {
 	aad := append([]byte(nil), header...)
+	aad = append(aad, metadataDigest...)
 	suffix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(suffix, index)
 	return append(aad, suffix...)
@@ -378,5 +425,77 @@ func oversizedChunkLength(data []byte) []byte {
 	result := append([]byte(nil), data...)
 	binary.LittleEndian.PutUint32(result[headerSize:headerSize+4], 0xffffffff)
 	return result
+}
+func zeroChunkSize(data []byte) []byte {
+	result := append([]byte(nil), data...)
+	binary.LittleEndian.PutUint32(result[8:12], 0)
+	return result
+}
+func emptyMetadataBlock(data []byte) []byte {
+	result := append([]byte(nil), data...)
+	result[5] |= 0x02
+	return append(result[:headerSize], append([]byte{0, 0, 0, 0}, result[headerSize:]...)...)
+}
+func oversizedEncryptedChunkSize(data []byte) []byte {
+	result := append([]byte(nil), data...)
+	binary.LittleEndian.PutUint32(result[8:12], ^uint32(0))
+	return result
+}
+func encryptedShortChunk(data []byte) []byte {
+	result := append([]byte(nil), data[:headerSize]...)
+	length := make([]byte, 4)
+	binary.LittleEndian.PutUint32(length, 15)
+	result = append(result, length...)
+	result = append(result, data[headerSize+4:headerSize+4+15]...)
+	return append(result, data[headerSize+4+17:]...)
+}
+func tamperMetadata(data []byte) []byte {
+	result := append([]byte(nil), data...)
+	position := bytes.Index(result, []byte("รายงาน-2026.txt"))
+	if position < 0 {
+		panic("filename missing")
+	}
+	filenameOffset := bytes.Index(result[position:], []byte("-"))
+	if filenameOffset < 0 {
+		panic("filename separator missing")
+	}
+	result[position+filenameOffset] = '_'
+	recomputeLegacyRoot(result)
+	return result
+}
+func malformedReservedMetadata(data []byte) []byte {
+	result := append([]byte(nil), data...)
+	position := bytes.Index(result, []byte("รายงาน-2026.txt"))
+	if position < 0 {
+		panic("filename missing")
+	}
+	result[position] = 0xff
+	return result
+}
+func oversizedChunkCount(data []byte) []byte {
+	result := append([]byte(nil), data...)
+	binary.LittleEndian.PutUint64(result[12:20], (1<<20)+1)
+	return result
+}
+func recomputeLegacyRoot(data []byte) {
+	footerOffset := len(data) - footerSize
+	offset := headerSize
+	if data[5]&0x02 != 0 {
+		metaLength := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		offset += 4 + metaLength
+	}
+	root := sha256.New()
+	_, _ = root.Write(data[:offset])
+	for index := uint64(0); index < binary.LittleEndian.Uint64(data[12:20]); index++ {
+		length := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+		offset += 4
+		leaf := sha256.Sum256(data[offset : offset+length])
+		_, _ = root.Write(leaf[:])
+		offset += length
+	}
+	if offset != footerOffset {
+		panic("invalid container framing")
+	}
+	copy(data[footerOffset:footerOffset+sha256.Size], root.Sum(nil))
 }
 func fatal(err error) { fmt.Fprintln(os.Stderr, err); os.Exit(1) }

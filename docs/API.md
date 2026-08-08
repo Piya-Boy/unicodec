@@ -99,7 +99,7 @@ raw map for the rest. On encode, SDK sorts by tag and rejects duplicates.
 Every operation surfaces the stable error identifiers from SPEC.md §5
 (`ERR_BAD_MAGIC`, `ERR_UNSUPPORTED_VER`, `ERR_UNSUPPORTED_ALGO`, `ERR_RESERVED_BITS`,
 `ERR_TRUNCATED`, `ERR_ROOT_MISMATCH`, `ERR_CHUNK_AUTH`, `ERR_MISSING_KEY`,
-`ERR_META_MALFORMED`). Each SDK maps them onto a native error type but exposes the same
+`ERR_META_MALFORMED`, `ERR_TRAILING_DATA`). Each SDK maps them onto a native error type but exposes the same
 identifier so callers can branch portably.
 
 ---

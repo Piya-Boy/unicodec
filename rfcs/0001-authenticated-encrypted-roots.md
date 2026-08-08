@@ -1,6 +1,6 @@
 # RFC 0001: Authenticated encrypted roots and canonical v1 grammar
 
-Status: Draft
+Status: Accepted 2026-08-08
 
 ## Motivation
 

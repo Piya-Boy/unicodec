@@ -3,6 +3,7 @@ package ubc
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -15,13 +16,26 @@ func chunkNonce(base [12]byte, index uint64) [12]byte {
 	}
 	return n
 }
-func chunkAAD(header []byte, index uint64) []byte {
+
+var rootInfo = []byte("UBC1 root authentication")
+
+func rootKey(key []byte, base [12]byte) []byte {
+	prk := hmac.New(sha256.New, base[:])
+	_, _ = prk.Write(key)
+	expand := hmac.New(sha256.New, prk.Sum(nil))
+	_, _ = expand.Write(rootInfo)
+	_, _ = expand.Write([]byte{1})
+	return expand.Sum(nil)
+}
+
+func chunkAAD(header, metadataDigest []byte, index uint64) []byte {
 	aad := append([]byte(nil), header...)
+	aad = append(aad, metadataDigest...)
 	i := make([]byte, 8)
 	binary.LittleEndian.PutUint64(i, index)
 	return append(aad, i...)
 }
-func sealChunk(key []byte, base [12]byte, header []byte, index uint64, plain []byte) ([]byte, error) {
+func sealChunk(key []byte, base [12]byte, header, metadataDigest []byte, index uint64, plain []byte) ([]byte, error) {
 	b, e := aes.NewCipher(key)
 	if e != nil {
 		return nil, e
@@ -31,10 +45,10 @@ func sealChunk(key []byte, base [12]byte, header []byte, index uint64, plain []b
 		return nil, e
 	}
 	n := chunkNonce(base, index)
-	return a.Seal(nil, n[:], plain, chunkAAD(header, index)), nil
+	return a.Seal(nil, n[:], plain, chunkAAD(header, metadataDigest, index)), nil
 }
 
-func openChunk(key []byte, base [12]byte, header []byte, index uint64, data []byte) ([]byte, error) {
+func openChunk(key []byte, base [12]byte, header, metadataDigest []byte, index uint64, data []byte) ([]byte, error) {
 	b, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -44,7 +58,7 @@ func openChunk(key []byte, base [12]byte, header []byte, index uint64, data []by
 		return nil, err
 	}
 	n := chunkNonce(base, index)
-	plain, err := a.Open(nil, n[:], data, chunkAAD(header, index))
+	plain, err := a.Open(nil, n[:], data, chunkAAD(header, metadataDigest, index))
 	if err != nil {
 		return nil, ErrChunkAuth
 	}
@@ -69,7 +83,7 @@ func EncodeEncryptedWithFixedNonce(data, key []byte, base [12]byte, entries []Me
 		return nil, e
 	}
 	count := uint64((len(data) + int(size) - 1) / int(size))
-	h := Header{Version: Version, Flags: FlagEncrypted, HashAlgo: HashSHA256, AEADAlgo: AEADAESGCM, ChunkSize: size, ChunkCount: count, TotalSize: uint64(len(data)), BaseNonce: base}
+	h := Header{Version: Version, Flags: FlagEncrypted, HashAlgo: HashHMACSHA256, AEADAlgo: AEADAESGCM, ChunkSize: size, ChunkCount: count, TotalSize: uint64(len(data)), BaseNonce: base}
 	if len(meta) > 0 {
 		h.Flags |= FlagHasMetadata
 	}
@@ -80,12 +94,13 @@ func EncodeEncryptedWithFixedNonce(data, key []byte, base [12]byte, entries []Me
 	out := append([]byte(nil), head...)
 	out = append(out, meta...)
 	leaves := []byte{}
+	metadataDigest := sha256.Sum256(meta)
 	for i, off := uint64(0), 0; off < len(data); i, off = i+1, off+int(size) {
 		end := off + int(size)
 		if end > len(data) {
 			end = len(data)
 		}
-		c, e := sealChunk(key, base, head, i, data[off:end])
+		c, e := sealChunk(key, base, head, metadataDigest[:], i, data[off:end])
 		if e != nil {
 			return nil, e
 		}
@@ -96,7 +111,10 @@ func EncodeEncryptedWithFixedNonce(data, key []byte, base [12]byte, entries []Me
 		x := sha256.Sum256(c)
 		leaves = append(leaves, x[:]...)
 	}
-	root := sha256.Sum256(append(append(append([]byte(nil), head...), meta...), leaves...))
-	out = append(out, root[:]...)
+	root := hmac.New(sha256.New, rootKey(key, base))
+	_, _ = root.Write(head)
+	_, _ = root.Write(meta)
+	_, _ = root.Write(leaves)
+	out = append(out, root.Sum(nil)...)
 	return append(out, "UBCE"...), nil
 }

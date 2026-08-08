@@ -2,6 +2,7 @@ package ubc
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
@@ -60,18 +61,20 @@ func limitsFor(options DecodeOptions) decodeLimits {
 }
 
 type Decoder struct {
-	source      io.Reader
-	header      Header
-	headerBytes []byte
-	metadata    []MetadataEntry
-	key         []byte
-	root        hashWriter
-	limits      decodeLimits
-	chunkIndex  uint64
-	plainTotal  uint64
-	pending     []byte
-	terminalErr error
-	finalized   bool
+	source         io.Reader
+	header         Header
+	headerBytes    []byte
+	metadataDigest [sha256.Size]byte
+	metadata       []MetadataEntry
+	metadataRaw    []byte
+	key            []byte
+	root           hashWriter
+	limits         decodeLimits
+	chunkIndex     uint64
+	plainTotal     uint64
+	pending        []byte
+	terminalErr    error
+	finalized      bool
 }
 
 type hashWriter interface {
@@ -92,16 +95,7 @@ func NewDecoder(source io.Reader, options DecodeOptions) (*Decoder, error) {
 		return nil, err
 	}
 	limits := limitsFor(options)
-	if header.ChunkCount > limits.maxChunkCount || header.TotalSize > limits.maxTotalSize {
-		return nil, ErrTruncated
-	}
-	if header.Encrypted() && len(options.Key) == 0 {
-		return nil, ErrMissingKey
-	}
-	if header.Encrypted() && len(options.Key) != 32 {
-		return nil, ErrMissingKey
-	}
-	decoder := &Decoder{source: source, header: header, headerBytes: headerBytes, root: sha256.New(), limits: limits}
+	decoder := &Decoder{source: source, header: header, headerBytes: headerBytes, metadataDigest: sha256.Sum256(nil), root: sha256.New(), limits: limits}
 	_, _ = decoder.root.Write(headerBytes)
 	if header.HasMetadata() {
 		region, err := readMetadataRegion(source, limits.maxMetaBytes)
@@ -113,9 +107,22 @@ func NewDecoder(source io.Reader, options DecodeOptions) (*Decoder, error) {
 			return nil, err
 		}
 		decoder.metadata = metadata
+		decoder.metadataRaw = region
+		decoder.metadataDigest = sha256.Sum256(region)
 		_, _ = decoder.root.Write(region)
 	}
+	if header.Encrypted() && len(options.Key) != 32 {
+		return nil, ErrMissingKey
+	}
+	if header.ChunkCount > limits.maxChunkCount || header.TotalSize > limits.maxTotalSize {
+		return nil, ErrTruncated
+	}
 	decoder.key = append([]byte(nil), options.Key...)
+	if header.Encrypted() {
+		decoder.root = hmac.New(sha256.New, rootKey(decoder.key, header.BaseNonce))
+		_, _ = decoder.root.Write(headerBytes)
+		_, _ = decoder.root.Write(decoder.metadataRaw)
+	}
 	return decoder, nil
 }
 
@@ -169,7 +176,10 @@ func (d *Decoder) loadChunk() error {
 	plain := body
 	if d.header.Encrypted() {
 		var err error
-		plain, err = openChunk(d.key, d.header.BaseNonce, d.headerBytes, d.chunkIndex, body)
+		if len(body) < 16 {
+			return ErrChunkAuth
+		}
+		plain, err = openChunk(d.key, d.header.BaseNonce, d.headerBytes, d.metadataDigest[:], d.chunkIndex, body)
 		if err != nil {
 			return err
 		}
@@ -194,11 +204,31 @@ func (d *Decoder) verifyFooter() error {
 	if !bytes.Equal(footer[32:], []byte("UBCE")) {
 		return ErrTruncated
 	}
-	if d.plainTotal != d.header.TotalSize || !bytes.Equal(footer[:32], d.root.Sum(nil)) {
+	if d.plainTotal != d.header.TotalSize || !rootMatches(d.header.Encrypted(), footer[:32], d.root.Sum(nil)) {
 		return ErrRootMismatch
+	}
+	var extra [1]byte
+	for {
+		n, err := d.source.Read(extra[:])
+		if n > 0 {
+			return ErrTrailingData
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return ErrTruncated
+		}
 	}
 	d.finalized = true
 	return nil
+}
+
+func rootMatches(encrypted bool, got, want []byte) bool {
+	if encrypted {
+		return hmac.Equal(got, want)
+	}
+	return bytes.Equal(got, want)
 }
 
 func readMetadataRegion(reader io.Reader, maxMetaBytes uint64) ([]byte, error) {

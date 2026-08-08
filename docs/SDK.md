@@ -95,7 +95,7 @@ const { data: out, meta } = decodeBytes(c, { key });
 ## 5. Porting checklist (future SDKs)
 
 1. Implement header/meta/payload/footer per SPEC.md, LE integers, fixed order.
-2. Implement flat-root SHA-256 and per-chunk AES-256-GCM per ALGORITHM.md.
+2. Implement SHA-256 plain roots, HMAC-SHA-256 encrypted roots, and per-chunk AES-256-GCM per SPEC.md.
 3. Handle 64-bit fields with a real 64-bit type (language-appropriate).
 4. Wire the shared vectors as the test suite; do not write bespoke expectations.
 5. Map errors to the stable identifiers.

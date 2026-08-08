@@ -49,7 +49,8 @@ Encrypted vectors additionally fix `key` and `baseNonce` so output is reproducib
 
 ### 2.2 Positive — encrypted mode (fixed key + nonce)
 - same size matrix as plain
-- with and without metadata (verify metadata stays authenticated, not encrypted)
+- with and without metadata (verify metadata stays authenticated, not encrypted), including an
+  encrypted empty container with a wrong key
 
 ### 2.3 Negative — must reject with exact error id
 - bad magic → `ERR_BAD_MAGIC`
@@ -63,6 +64,8 @@ Encrypted vectors additionally fix `key` and `baseNonce` so output is reproducib
 - encrypted container, no key → `ERR_MISSING_KEY`
 - metadata TLV out-of-order / duplicate tag / length overrun → `ERR_META_MALFORMED`
 - oversized length field beyond input → `ERR_TRUNCATED` (DoS guard)
+- zero `chunk_size` → `ERR_RESERVED_BITS`; empty metadata block → `ERR_META_MALFORMED`
+- trailing bytes after footer → `ERR_TRAILING_DATA`
 
 ### 2.4 Metadata ordering
 - encoder given unsorted tags MUST emit sorted; duplicate tags MUST be rejected at encode.

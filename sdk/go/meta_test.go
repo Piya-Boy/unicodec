@@ -56,3 +56,16 @@ func TestMetadataRejectsNegativeVectors(t *testing.T) {
 		}
 	}
 }
+
+func TestMetadataRejectsMalformedReservedValues(t *testing.T) {
+	for _, entry := range []MetadataEntry{
+		{Tag: 1, Value: []byte{0xef, 0xbb, 0xbf, 'x'}},
+		{Tag: 1, Value: []byte{0xff}},
+		{Tag: 2, Value: []byte{0x80}},
+		{Tag: 3, Value: []byte{1}},
+	} {
+		if _, err := EncodeMetadata([]MetadataEntry{entry}); !errors.Is(err, ErrMetaMalformed) {
+			t.Fatalf("reserved metadata accepted: %#v", entry)
+		}
+	}
+}

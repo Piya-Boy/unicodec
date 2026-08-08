@@ -14,6 +14,7 @@ const (
 	CodeRootMismatch    ErrorCode = "ERR_ROOT_MISMATCH"
 	CodeChunkAuth       ErrorCode = "ERR_CHUNK_AUTH"
 	CodeMissingKey      ErrorCode = "ERR_MISSING_KEY"
+	CodeTrailingData    ErrorCode = "ERR_TRAILING_DATA"
 )
 
 type Error struct {
@@ -37,6 +38,7 @@ var (
 	ErrRootMismatch    = &Error{Code: CodeRootMismatch}
 	ErrChunkAuth       = &Error{Code: CodeChunkAuth}
 	ErrMissingKey      = &Error{Code: CodeMissingKey}
+	ErrTrailingData    = &Error{Code: CodeTrailingData}
 )
 
 func ErrorCodeOf(err error) ErrorCode {

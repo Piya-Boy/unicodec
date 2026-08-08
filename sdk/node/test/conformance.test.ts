@@ -184,6 +184,18 @@ test("streamed inspect and verify honor the container contract", async () => {
   assert.deepEqual(await verifyStream(Readable.from([encrypted]), { key }), { ok: false, error: "ERR_CHUNK_AUTH", failedChunk: 0n });
 });
 
+test("streamed metadata truncation is malformed metadata", async () => {
+  const container = await readFile(resolve(vectorsRoot, "expected/plain-metadata.ubc"));
+  for (const end of [40, 41, 42, 43, 45]) {
+    const incompleteMetadata = container.subarray(0, end);
+    assert.deepEqual(await verifyStream(Readable.from([incompleteMetadata])), { ok: false, error: "ERR_META_MALFORMED" });
+    await assert.rejects(
+      inspectStream(Readable.from([incompleteMetadata])),
+      (error: unknown) => error instanceof UbcError && error.code === "ERR_META_MALFORMED",
+    );
+  }
+});
+
 test("inspectStream restores bytes beyond the inspected prefix", async () => {
   const container = await readFile(resolve(vectorsRoot, "expected/plain-metadata.ubc"));
   const source = Readable.from([container]);
@@ -230,6 +242,20 @@ test("metadata object rejects non-ASCII MIME input before ASCII encoding", () =>
   }
 });
 
+test("reserved metadata values reject invalid wire encodings", () => {
+  for (const entry of [
+    { tag: 1, value: Buffer.from([0xef, 0xbb, 0xbf, 0x78]) },
+    { tag: 1, value: Buffer.from([0xff]) },
+    { tag: 2, value: Buffer.from([0x80]) },
+    { tag: 3, value: Buffer.from([1]) },
+  ]) {
+    assert.throws(
+      () => encodeBytes(Buffer.from("x"), [entry]),
+      (error: unknown) => error instanceof UbcError && error.code === "ERR_META_MALFORMED",
+    );
+  }
+});
+
 test("complete encrypted chunk bodies shorter than a GCM tag fail authentication", () => {
   const key = Buffer.from("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "hex");
   const valid = encodeBytes(Buffer.from("x"), [], { key, chunkSize: 1, baseNonce: Buffer.alloc(12, 0x42) });
@@ -247,6 +273,16 @@ test("complete encrypted chunk bodies shorter than a GCM tag fail authentication
     (error: unknown) => error instanceof UbcError && error.code === "ERR_CHUNK_AUTH" && error.failedChunk === 0n,
   );
   assert.deepEqual(verify(malformed, { key }), { ok: false, error: "ERR_CHUNK_AUTH", failedChunk: 0n });
+});
+
+test("encrypted empty containers authenticate the supplied key", () => {
+  const key = Buffer.from("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "hex");
+  const valid = encodeBytes(Buffer.alloc(0), [], { key, chunkSize: 1, baseNonce: Buffer.alloc(12, 0x42) });
+  const wrong = Buffer.from(key); wrong[0] ^= 1;
+  assert.throws(
+    () => decodeBytes(valid, { key: wrong }),
+    (error: unknown) => error instanceof UbcError && error.code === "ERR_ROOT_MISMATCH",
+  );
 });
 
 test("seeded round trips cover randomized sizes, metadata, encryption, and fragmented streams", async () => {

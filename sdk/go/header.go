@@ -9,9 +9,12 @@ const (
 	HeaderSize = 40
 	Version    = 1
 
+	// HashSHA256 is the unkeyed checksum used by plain containers.
 	HashSHA256 = 0
-	AEADNone   = 0
-	AEADAESGCM = 1
+	// HashHMACSHA256 authenticates encrypted container roots.
+	HashHMACSHA256 = 1
+	AEADNone       = 0
+	AEADAESGCM     = 1
 
 	FlagEncrypted   = 1 << 0
 	FlagHasMetadata = 1 << 1
@@ -78,19 +81,19 @@ func (h Header) validate() error {
 	if h.Version != Version {
 		return ErrUnsupportedVer
 	}
-	if h.HashAlgo != HashSHA256 || (h.AEADAlgo != AEADNone && h.AEADAlgo != AEADAESGCM) {
+	if (h.HashAlgo != HashSHA256 && h.HashAlgo != HashHMACSHA256) || (h.AEADAlgo != AEADNone && h.AEADAlgo != AEADAESGCM) {
 		return ErrUnsupportedAlgo
 	}
 	if h.Flags&^uint8(FlagEncrypted|FlagHasMetadata) != 0 {
 		return ErrReservedBits
 	}
 	if h.Encrypted() {
-		if h.AEADAlgo != AEADAESGCM {
+		if h.AEADAlgo != AEADAESGCM || h.HashAlgo != HashHMACSHA256 || h.ChunkSize == 0 || h.ChunkSize > ^uint32(0)-16 {
 			return ErrReservedBits
 		}
 		return nil
 	}
-	if h.AEADAlgo != AEADNone || h.BaseNonce != [12]byte{} {
+	if h.AEADAlgo != AEADNone || h.HashAlgo != HashSHA256 || h.BaseNonce != [12]byte{} || h.ChunkSize == 0 {
 		return ErrReservedBits
 	}
 	return nil

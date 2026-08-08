@@ -39,9 +39,9 @@ SDK disagree, this document wins.
 | 0      | `magic`       | bytes      | 4    | MUST equal ASCII `UBC1` (`0x55 0x42 0x43 0x31`) |
 | 4      | `version`     | uint8      | 1    | MUST equal `1` |
 | 5      | `flags`       | uint8      | 1    | see 2.1.1 |
-| 6      | `hash_algo`   | uint8      | 1    | `0` = SHA-256. Others reserved |
+| 6      | `hash_algo`   | uint8      | 1    | plain: `0` = SHA-256 checksum; encrypted: `1` = HMAC-SHA-256 root authentication |
 | 7      | `aead_algo`   | uint8      | 1    | `0` = none, `1` = AES-256-GCM. Others reserved |
-| 8      | `chunk_size`  | uint32 LE  | 4    | Advisory plaintext bytes per chunk. Readers MUST rely on per-chunk `clen`, not this value |
+| 8      | `chunk_size`  | uint32 LE  | 4    | Plaintext bytes per chunk; MUST be nonzero. Readers rely on per-chunk `clen` for framing |
 | 12     | `chunk_count` | uint64 LE  | 8    | Number of chunks in payload |
 | 20     | `total_size`  | uint64 LE  | 8    | Total plaintext byte length across all chunks |
 | 28     | `base_nonce`  | bytes      | 12   | Base nonce for AEAD. MUST be all-zero when `aead_algo = 0` |
@@ -57,12 +57,15 @@ Header is a fixed **40 bytes**.
 | 2–7 | reserved      | MUST be `0`. Reader MUST reject if any set |
 
 Consistency rules:
-- `encrypted = 1` MUST imply `aead_algo = 1`. `encrypted = 0` MUST imply `aead_algo = 0`.
+- `encrypted = 1` MUST imply `aead_algo = 1`, `hash_algo = 1`, and `chunk_size <= 0xffff_ffef`.
+  `encrypted = 0` MUST imply `aead_algo = 0` and `hash_algo = 0`.
 - `encrypted = 0` MUST imply `base_nonce` is all-zero.
 
 ### 2.2 Metadata Block
 
 Present only when `flags.has_metadata = 1`.
+
+`meta_len` MUST be nonzero when the block is present.
 
 | Field      | Type      | Size       | Notes |
 |------------|-----------|-----------:|-------|
@@ -86,14 +89,15 @@ Rules:
   (Deterministic ordering; readers MUST reject out-of-order or duplicate tags.)
 - Unknown tags MUST be preserved on decode and passed through on re-encode, but
   MUST still obey ascending-order and no-duplicate rules.
-- A malformed block (truncated entry, length overruns `meta_len`) → `ERR_META_MALFORMED`.
+- A malformed block (empty block, truncated entry, length overruns `meta_len`, invalid reserved
+  value) → `ERR_META_MALFORMED`.
 
 #### 2.2.2 Reserved Tags
 
 | Tag    | Name        | Value encoding |
 |-------:|-------------|----------------|
-| 0x0001 | `filename`  | UTF-8 bytes, no BOM, no NUL terminator |
-| 0x0002 | `mime_type` | ASCII bytes |
+| 0x0001 | `filename`  | valid UTF-8 bytes, no BOM, no NUL |
+| 0x0002 | `mime_type` | ASCII bytes in `0x01..0x7f` |
 | 0x0003 | `created_at`| int64 LE, Unix milliseconds UTC |
 | 0x1000+| user-defined| opaque bytes (application-owned) |
 
@@ -109,6 +113,7 @@ Exactly `chunk_count` chunks, concatenated, no separators:
 - **Plain mode** (`encrypted = 0`): `data` = raw plaintext bytes. `clen` = plaintext length.
 - **Encrypted mode** (`encrypted = 1`): `data` = ciphertext followed by the 16-byte
   GCM tag. `clen` = ciphertext length + 16. Plaintext length of the chunk = `clen - 16`.
+  `clen < 16` → `ERR_CHUNK_AUTH`.
 
 The sum of plaintext lengths across all chunks MUST equal `total_size`.
 
@@ -124,6 +129,7 @@ final chunk holds the remainder and MAY be smaller. A zero-length input produces
 | `magic_end` | bytes | 4    | MUST equal ASCII `UBCE` (`0x55 0x42 0x43 0x45`) |
 
 Absence of `magic_end` at the expected offset → `ERR_TRUNCATED`.
+Bytes after the footer → `ERR_TRAILING_DATA`.
 
 ---
 
@@ -139,9 +145,9 @@ Applies only when `flags.encrypted = 1`.
   chunk index and `le96(i)` is `i` encoded as a 12-byte little-endian integer.
   `base_nonce` MUST be generated from a cryptographically secure RNG per container and
   MUST NOT be reused across containers with the same key.
-- **AAD per chunk:** `AAD_i = header_bytes || le64(i)`, where `header_bytes` is the full
-  40-byte header and `le64(i)` is the chunk index as uint64 LE. This binds every chunk
-  to the header and to its position (prevents chunk reorder, header tampering).
+- **AAD per chunk:** `AAD_i = header_bytes || SHA-256(meta_region) || le64(i)`, where
+  `header_bytes` is the full 40-byte header, `meta_region` is empty when absent, and
+  `le64(i)` is the chunk index. This binds every chunk to the header, metadata, and position.
 - Decrypt MUST verify the tag for chunk `i` **before** releasing any of its plaintext.
   A failing tag → `ERR_CHUNK_AUTH`, and no further plaintext is emitted (fail closed).
 
@@ -149,12 +155,12 @@ Applies only when `flags.encrypted = 1`.
 
 ## 4. Integrity (root_hash)
 
-`root_hash` binds header, metadata, and every chunk. Computed as:
+`root_hash` binds header, metadata, and every chunk. First compute:
 
 ```
 h_i       = SHA-256( chunk_i.data )            # over on-disk bytes (ciphertext+tag if encrypted)
 leaf_cat  = h_0 || h_1 || ... || h_(N-1)       # empty if chunk_count = 0
-root_hash = SHA-256( header_bytes || meta_region || leaf_cat )
+root_input = header_bytes || meta_region || leaf_cat
 ```
 
 Where:
@@ -163,11 +169,23 @@ Where:
   `meta_tlv`) when present; empty when `has_metadata = 0`.
 - `h_i` is over `chunk_i.data` (the `clen`-length body), **not** including the `clen` prefix.
 
-Verification: a reader recomputes `root_hash` and compares. Mismatch → `ERR_ROOT_MISMATCH`.
+For plain containers (`hash_algo = 0`), `root_hash = SHA-256(root_input)`.
 
-`root_hash` covers integrity/tamper detection for both plain and encrypted modes.
-In encrypted mode the per-chunk GCM tag additionally provides authenticated
-confidentiality; `root_hash` still MUST be checked.
+For encrypted containers (`hash_algo = 1`), derive `root_key` with HKDF-SHA-256:
+
+```
+PRK      = HMAC-SHA-256(base_nonce, encryption_key)
+root_key = HMAC-SHA-256(PRK, ASCII("UBC1 root authentication") || 0x01)
+root_hash = HMAC-SHA-256(root_key, root_input)
+```
+
+Verification recomputes `root_hash` and compares it in constant time for encrypted
+containers. Mismatch → `ERR_ROOT_MISMATCH`. This also authenticates the key for an
+encrypted zero-chunk container.
+
+The plain SHA-256 root detects accidental corruption only: an active attacker can recompute
+it. Encrypted containers use the keyed root plus GCM tags for authenticated confidentiality;
+the root still MUST be checked.
 
 ---
 
@@ -181,12 +199,13 @@ A conforming reader MUST reject, before emitting any plaintext, when:
 | `version` != 1 | `ERR_UNSUPPORTED_VER` |
 | `hash_algo` or `aead_algo` unknown | `ERR_UNSUPPORTED_ALGO` |
 | any reserved flag bit set | `ERR_RESERVED_BITS` |
-| flag/algo/nonce consistency (2.1.1) violated | `ERR_RESERVED_BITS` |
+| flag/algo/nonce/chunk-size consistency (2.1.1) violated | `ERR_RESERVED_BITS` |
 | truncated stream / missing `magic_end` | `ERR_TRUNCATED` |
 | `root_hash` mismatch | `ERR_ROOT_MISMATCH` |
 | GCM tag failure on a chunk | `ERR_CHUNK_AUTH` |
 | `encrypted = 1` but no key supplied | `ERR_MISSING_KEY` |
 | malformed metadata TLV | `ERR_META_MALFORMED` |
+| bytes after the footer | `ERR_TRAILING_DATA` |
 
 Error identifiers are stable across all SDKs. Each SDK maps them to a language-native
 error type but MUST expose the same identifier/code.
@@ -197,6 +216,18 @@ container, so a reader performing full verification MUST confirm `root_hash` bef
 declaring the container valid; a streaming reader MAY release per-chunk plaintext as
 tags pass and confirm `root_hash` at end-of-stream, but MUST surface
 `ERR_ROOT_MISMATCH` if the final check fails.
+
+When a container has multiple faults, readers apply this precedence order:
+
+1. Header length, magic, version, algorithm, flag, mode-combination, and `chunk_size` validation.
+2. Metadata presence, bounds, TLV order, and reserved-value validation.
+3. Missing or invalid encryption key.
+4. Payload framing and length/cap validation, including a truncated footer.
+5. Per-chunk GCM authentication, including encrypted `clen < 16`.
+6. Footer root value or root-MAC verification.
+7. Trailing-byte detection.
+
+Within a stage, the first condition encountered in wire order wins.
 
 ---
 

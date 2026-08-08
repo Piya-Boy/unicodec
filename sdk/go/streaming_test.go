@@ -44,6 +44,7 @@ func (r *bodyGuardReader) Read(p []byte) (int, error) {
 }
 
 var vectorKey = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+var wrongVectorKey = []byte{255, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
 var vectorNonce = [12]byte{0xf0, 0xe0, 0xd0, 0xc0, 0xb0, 0xa0, 0x90, 0x80, 0x70, 0x60, 0x50, 0x40}
 var vectorMetadata = []MetadataEntry{
 	{Tag: 1, Value: []byte("รายงาน-2026.txt")},
@@ -178,6 +179,12 @@ func TestStreamingDecoderRejectsNegativeVectors(t *testing.T) {
 		{"chunk-auth", ErrChunkAuth, vectorKey}, {"missing-key", ErrMissingKey, nil},
 		{"meta-out-of-order", ErrMetaMalformed, nil}, {"meta-duplicate", ErrMetaMalformed, nil},
 		{"meta-overrun", ErrMetaMalformed, nil}, {"oversized-clen", ErrTruncated, nil},
+		{"zero-chunk-size", ErrReservedBits, nil}, {"empty-metadata", ErrMetaMalformed, nil},
+		{"trailing-data", ErrTrailingData, nil},
+		{"encrypted-zero-chunk-size", ErrReservedBits, nil}, {"encrypted-oversized-chunk-size", ErrReservedBits, nil},
+		{"encrypted-short-clen", ErrChunkAuth, vectorKey}, {"encrypted-metadata-tamper", ErrChunkAuth, vectorKey},
+		{"reserved-metadata", ErrMetaMalformed, nil}, {"encrypted-reserved-metadata", ErrMetaMalformed, nil},
+		{"encrypted-cap-missing-key", ErrMissingKey, nil}, {"encrypted-empty-wrong-key", ErrRootMismatch, wrongVectorKey},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -208,14 +215,14 @@ func TestDecoderRejectsDoSCapsBeforeReadingBody(t *testing.T) {
 	}{
 		{
 			name:      "meta_len",
-			header:    Header{Version: Version, Flags: FlagHasMetadata, HashAlgo: HashSHA256},
+			header:    Header{Version: Version, Flags: FlagHasMetadata, HashAlgo: HashSHA256, ChunkSize: 1},
 			afterHead: appendUint32(nil, uint32(DefaultMaxMetaBytes+1)),
 			want:      ErrMetaMalformed,
 			maxOffset: HeaderSize + 4,
 		},
 		{
 			name:      "clen",
-			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkCount: 1, TotalSize: 1},
+			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkSize: 1, ChunkCount: 1, TotalSize: 1},
 			afterHead: appendUint32(nil, uint32(DefaultMaxChunkLen+1)),
 			read:      true,
 			want:      ErrTruncated,
@@ -223,13 +230,13 @@ func TestDecoderRejectsDoSCapsBeforeReadingBody(t *testing.T) {
 		},
 		{
 			name:      "chunk_count",
-			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkCount: DefaultMaxChunkCount + 1},
+			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkSize: 1, ChunkCount: DefaultMaxChunkCount + 1},
 			want:      ErrTruncated,
 			maxOffset: HeaderSize,
 		},
 		{
 			name:      "total_size",
-			header:    Header{Version: Version, HashAlgo: HashSHA256, TotalSize: DefaultMaxTotalSize + 1},
+			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkSize: 1, TotalSize: DefaultMaxTotalSize + 1},
 			want:      ErrTruncated,
 			maxOffset: HeaderSize,
 		},
@@ -274,7 +281,7 @@ func TestDecoderRejectsExplicitDoSCapsBeforeReadingBody(t *testing.T) {
 	}{
 		{
 			name:      "meta_len",
-			header:    Header{Version: Version, Flags: FlagHasMetadata, HashAlgo: HashSHA256},
+			header:    Header{Version: Version, Flags: FlagHasMetadata, HashAlgo: HashSHA256, ChunkSize: 1},
 			afterHead: appendUint32(nil, 2),
 			options:   DecodeOptions{MaxMetaBytes: 1},
 			want:      ErrMetaMalformed,
@@ -282,7 +289,7 @@ func TestDecoderRejectsExplicitDoSCapsBeforeReadingBody(t *testing.T) {
 		},
 		{
 			name:      "clen",
-			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkCount: 1, TotalSize: 1},
+			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkSize: 1, ChunkCount: 1, TotalSize: 1},
 			afterHead: appendUint32(nil, 2),
 			options:   DecodeOptions{MaxChunkLen: 1},
 			read:      true,
@@ -291,14 +298,14 @@ func TestDecoderRejectsExplicitDoSCapsBeforeReadingBody(t *testing.T) {
 		},
 		{
 			name:      "chunk_count",
-			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkCount: 2},
+			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkSize: 1, ChunkCount: 2},
 			options:   DecodeOptions{MaxChunkCount: 1},
 			want:      ErrTruncated,
 			maxOffset: HeaderSize,
 		},
 		{
 			name:      "total_size",
-			header:    Header{Version: Version, HashAlgo: HashSHA256, TotalSize: 2},
+			header:    Header{Version: Version, HashAlgo: HashSHA256, ChunkSize: 1, TotalSize: 2},
 			options:   DecodeOptions{MaxTotalSize: 1},
 			want:      ErrTruncated,
 			maxOffset: HeaderSize,

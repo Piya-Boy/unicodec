@@ -1,6 +1,7 @@
 package ubc
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -94,6 +95,7 @@ func (e *Encoder) Close() (err error) {
 	}
 	if len(e.options.Key) != 0 {
 		header.Flags |= FlagEncrypted
+		header.HashAlgo = HashHMACSHA256
 		header.AEADAlgo = AEADAESGCM
 		if e.options.BaseNonce != nil {
 			header.BaseNonce = *e.options.BaseNonce
@@ -111,9 +113,13 @@ func (e *Encoder) Close() (err error) {
 	if err := writeAll(e.sink, e.metadata); err != nil {
 		return err
 	}
-	root := sha256.New()
-	_, _ = root.Write(headerBytes)
-	_, _ = root.Write(e.metadata)
+	metadataDigest := sha256.Sum256(e.metadata)
+	var rootWriter hashWriter = sha256.New()
+	if header.Encrypted() {
+		rootWriter = hmac.New(sha256.New, rootKey(e.options.Key, header.BaseNonce))
+	}
+	_, _ = rootWriter.Write(headerBytes)
+	_, _ = rootWriter.Write(e.metadata)
 	if _, err := e.spool.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
@@ -129,7 +135,7 @@ func (e *Encoder) Close() (err error) {
 		}
 		body := buffer[:plainLength]
 		if header.Encrypted() {
-			body, err = sealChunk(e.options.Key, header.BaseNonce, headerBytes, index, body)
+			body, err = sealChunk(e.options.Key, header.BaseNonce, headerBytes, metadataDigest[:], index, body)
 			if err != nil {
 				return err
 			}
@@ -143,9 +149,9 @@ func (e *Encoder) Close() (err error) {
 			return err
 		}
 		leaf := sha256.Sum256(body)
-		_, _ = root.Write(leaf[:])
+		_, _ = rootWriter.Write(leaf[:])
 	}
-	if err := writeAll(e.sink, root.Sum(nil)); err != nil {
+	if err := writeAll(e.sink, rootWriter.Sum(nil)); err != nil {
 		return err
 	}
 	return writeAll(e.sink, []byte("UBCE"))

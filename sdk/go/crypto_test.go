@@ -2,7 +2,9 @@ package ubc
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
+	"io"
 	"os"
 	"testing"
 )
@@ -27,16 +29,61 @@ func TestEncryptedVector(t *testing.T) {
 	}
 }
 
+func TestRootKeyKnownAnswer(t *testing.T) {
+	key := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+	base := [12]byte{0xf0, 0xe0, 0xd0, 0xc0, 0xb0, 0xa0, 0x90, 0x80, 0x70, 0x60, 0x50, 0x40}
+	if got := hex.EncodeToString(rootKey(key, base)); got != "52c04b400d73df15d8a0db6ba58919f46fe822fff200fb50d8dee097af3c688c" {
+		t.Fatalf("root key = %s", got)
+	}
+}
+
+func TestEncryptedEmptyRejectsWrongKey(t *testing.T) {
+	key := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+	container, err := EncodeEncryptedWithFixedNonce(nil, key, [12]byte{1}, nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrong := append([]byte(nil), key...)
+	wrong[0] ^= 1
+	decoder, err := NewDecoder(bytes.NewReader(container), DecodeOptions{Key: wrong})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = io.ReadAll(decoder); !errors.Is(err, ErrRootMismatch) {
+		t.Fatalf("wrong key error = %v", err)
+	}
+}
+
+func TestEncryptedMetadataIsChunkAAD(t *testing.T) {
+	key := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+	container, err := EncodeEncryptedWithFixedNonce([]byte("x"), key, [12]byte{1}, []MetadataEntry{{Tag: 2, Value: []byte("text/plain")}}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	position := bytes.Index(container, []byte("text/plain"))
+	if position < 0 {
+		t.Fatal("metadata not found")
+	}
+	container[position] = 'q'
+	decoder, err := NewDecoder(bytes.NewReader(container), DecodeOptions{Key: key})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = io.ReadAll(decoder); !errors.Is(err, ErrChunkAuth) {
+		t.Fatalf("metadata tamper error = %v", err)
+	}
+}
+
 func TestOpenChunkVerifiesBeforeRelease(t *testing.T) {
 	key := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
 	base := [12]byte{1}
 	header := make([]byte, HeaderSize)
-	ciphertext, err := sealChunk(key, base, header, 0, []byte("test"))
+	ciphertext, err := sealChunk(key, base, header, make([]byte, 32), 0, []byte("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ciphertext[0] ^= 1
-	plain, err := openChunk(key, base, header, 0, ciphertext)
+	plain, err := openChunk(key, base, header, make([]byte, 32), 0, ciphertext)
 	if !errors.Is(err, ErrChunkAuth) || plain != nil {
 		t.Fatalf("plain=%x err=%v", plain, err)
 	}

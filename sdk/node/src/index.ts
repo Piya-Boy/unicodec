@@ -2,6 +2,7 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   randomBytes,
   timingSafeEqual,
 } from "node:crypto";
@@ -19,7 +20,8 @@ export type ErrorCode =
   | "ERR_ROOT_MISMATCH"
   | "ERR_CHUNK_AUTH"
   | "ERR_MISSING_KEY"
-  | "ERR_META_MALFORMED";
+  | "ERR_META_MALFORMED"
+  | "ERR_TRAILING_DATA";
 
 export class UbcError extends Error {
   constructor(public readonly code: ErrorCode, public readonly failedChunk?: bigint) {
@@ -166,12 +168,20 @@ function parseHeader(data: Buffer): Header {
 
 function validateHeader(header: Header): void {
   if (header.version !== 1) fail("ERR_UNSUPPORTED_VER");
-  if (header.hashAlgo !== 0 || (header.aeadAlgo !== 0 && header.aeadAlgo !== 1)) fail("ERR_UNSUPPORTED_ALGO");
+  if ((header.hashAlgo !== 0 && header.hashAlgo !== 1) || (header.aeadAlgo !== 0 && header.aeadAlgo !== 1)) fail("ERR_UNSUPPORTED_ALGO");
   if ((header.flags & ~(FLAG_ENCRYPTED | FLAG_METADATA)) !== 0) fail("ERR_RESERVED_BITS");
   const encrypted = (header.flags & FLAG_ENCRYPTED) !== 0;
-  if ((encrypted && header.aeadAlgo !== 1) || (!encrypted && (header.aeadAlgo !== 0 || !header.baseNonce.equals(Buffer.alloc(12))))) {
+  if ((encrypted && (header.aeadAlgo !== 1 || header.hashAlgo !== 1 || header.chunkSize === 0 || header.chunkSize > 0xffffffff - 16)) || (!encrypted && (header.aeadAlgo !== 0 || header.hashAlgo !== 0 || header.chunkSize === 0 || !header.baseNonce.equals(Buffer.alloc(12))))) {
     fail("ERR_RESERVED_BITS");
   }
+}
+
+function validReservedMetadata(entry: MetadataEntry): boolean {
+  const value = asBuffer(entry.value);
+  if (entry.tag === 1) return !value.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])) && !value.includes(0) && Buffer.from(value.toString("utf8"), "utf8").equals(value);
+  if (entry.tag === 2) return value.every((byte) => byte >= 1 && byte <= 0x7f);
+  if (entry.tag === 3) return value.byteLength === 8;
+  return true;
 }
 
 function utf8(value: string): Buffer {
@@ -233,6 +243,7 @@ function encodeMetadata(entries: MetadataEntry[]): Buffer {
   for (const entry of sorted) {
     if (!Number.isInteger(entry.tag) || entry.tag < 0 || entry.tag > 0xffff || entry.tag === previous) fail("ERR_META_MALFORMED");
     const value = asBuffer(entry.value);
+    if (!validReservedMetadata({ tag: entry.tag, value })) fail("ERR_META_MALFORMED");
     const field = Buffer.alloc(6);
     field.writeUInt16LE(entry.tag, 0);
     field.writeUInt32LE(value.byteLength, 2);
@@ -248,7 +259,7 @@ function encodeMetadata(entries: MetadataEntry[]): Buffer {
 function parseMetadata(container: Buffer, offset: number, maxBytes: number): { metadata: MetadataEntry[]; region: Buffer; offset: number } {
   if (offset + 4 > container.byteLength) fail("ERR_META_MALFORMED");
   const length = container.readUInt32LE(offset);
-  if (length > maxBytes || offset + 4 + length > container.byteLength) fail("ERR_META_MALFORMED");
+  if (length === 0 || length > maxBytes || offset + 4 + length > container.byteLength) fail("ERR_META_MALFORMED");
   const end = offset + 4 + length;
   const metadata: MetadataEntry[] = [];
   let cursor = offset + 4;
@@ -259,7 +270,9 @@ function parseMetadata(container: Buffer, offset: number, maxBytes: number): { m
     const valueLength = container.readUInt32LE(cursor + 2);
     cursor += 6;
     if (tag <= previous || valueLength > end - cursor) fail("ERR_META_MALFORMED");
-    metadata.push({ tag, value: Buffer.from(container.subarray(cursor, cursor + valueLength)) });
+    const entry = { tag, value: Buffer.from(container.subarray(cursor, cursor + valueLength)) };
+    if (!validReservedMetadata(entry)) fail("ERR_META_MALFORMED");
+    metadata.push(entry);
     previous = tag;
     cursor += valueLength;
   }
@@ -272,22 +285,30 @@ function nonce(baseNonce: Buffer, index: bigint): Buffer {
   return result;
 }
 
-function aad(header: Buffer, index: bigint): Buffer {
-  const suffix = Buffer.alloc(8);
-  suffix.writeBigUInt64LE(index);
-  return Buffer.concat([header, suffix]);
+const ROOT_INFO = Buffer.from("UBC1 root authentication", "ascii");
+
+function rootKey(key: Buffer, baseNonce: Buffer): Buffer {
+  const prk = createHmac("sha256", baseNonce).update(key).digest();
+  return createHmac("sha256", prk).update(ROOT_INFO).update(Buffer.from([1])).digest();
 }
 
-function seal(key: Buffer, baseNonce: Buffer, header: Buffer, index: bigint, plaintext: Buffer): Buffer {
+function aad(header: Buffer, metadataDigest: Buffer, index: bigint): Buffer {
+  const suffix = Buffer.alloc(8);
+  suffix.writeBigUInt64LE(index);
+  return Buffer.concat([header, metadataDigest, suffix]);
+}
+
+function seal(key: Buffer, baseNonce: Buffer, header: Buffer, metadataDigest: Buffer, index: bigint, plaintext: Buffer): Buffer {
   const cipher = createCipheriv("aes-256-gcm", key, nonce(baseNonce, index));
-  cipher.setAAD(aad(header, index));
+  cipher.setAAD(aad(header, metadataDigest, index));
   return Buffer.concat([cipher.update(plaintext), cipher.final(), cipher.getAuthTag()]);
 }
 
-function open(key: Buffer, baseNonce: Buffer, header: Buffer, index: bigint, body: Buffer): Buffer {
+function open(key: Buffer, baseNonce: Buffer, header: Buffer, metadataDigest: Buffer, index: bigint, body: Buffer): Buffer {
   try {
+	if (body.byteLength < 16) fail("ERR_CHUNK_AUTH", index);
     const decipher = createDecipheriv("aes-256-gcm", key, nonce(baseNonce, index));
-    decipher.setAAD(aad(header, index));
+    decipher.setAAD(aad(header, metadataDigest, index));
     decipher.setAuthTag(body.subarray(body.byteLength - 16));
     return Buffer.concat([decipher.update(body.subarray(0, -16)), decipher.final()]);
   } catch {
@@ -304,13 +325,14 @@ export function encodeBytes(data: Uint8Array, metadata: MetadataInput = [], opti
   const baseNonce = key === undefined ? Buffer.alloc(12) : options.baseNonce === undefined ? randomBytes(12) : asBuffer(options.baseNonce);
   if (baseNonce.byteLength !== 12) fail("ERR_RESERVED_BITS");
   const chunkCount = BigInt(Math.ceil(plain.byteLength / chunkSize));
-  const header = marshalHeader({ version: 1, flags: (key ? FLAG_ENCRYPTED : 0) | (metaRegion.byteLength ? FLAG_METADATA : 0), hashAlgo: 0, aeadAlgo: key ? 1 : 0, chunkSize, chunkCount, totalSize: BigInt(plain.byteLength), baseNonce });
+  const header = marshalHeader({ version: 1, flags: (key ? FLAG_ENCRYPTED : 0) | (metaRegion.byteLength ? FLAG_METADATA : 0), hashAlgo: key ? 1 : 0, aeadAlgo: key ? 1 : 0, chunkSize, chunkCount, totalSize: BigInt(plain.byteLength), baseNonce });
   const parts: Buffer[] = [header, metaRegion];
-  const root = createHash("sha256");
+  const root = key ? createHmac("sha256", rootKey(key, baseNonce)) : createHash("sha256");
+  const metadataDigest = createHash("sha256").update(metaRegion).digest();
   root.update(header); root.update(metaRegion);
   for (let index = 0n; index < chunkCount; index++) {
     const start = Number(index) * chunkSize;
-    const body = key ? seal(key, baseNonce, header, index, plain.subarray(start, start + chunkSize)) : plain.subarray(start, start + chunkSize);
+    const body = key ? seal(key, baseNonce, header, metadataDigest, index, plain.subarray(start, start + chunkSize)) : plain.subarray(start, start + chunkSize);
     const length = Buffer.alloc(4); length.writeUInt32LE(body.byteLength);
     parts.push(length, body); root.update(createHash("sha256").update(body).digest());
   }
@@ -326,13 +348,14 @@ export function decodeBytes(containerBytes: Uint8Array, options: DecodeOptions =
   const maxChunkLen = options.maxChunkLen ?? DEFAULT_MAX_CHUNK_LEN;
   const maxChunkCount = options.maxChunkCount ?? DEFAULT_MAX_CHUNK_COUNT;
   const maxTotalSize = options.maxTotalSize ?? DEFAULT_MAX_TOTAL_SIZE;
-  if (header.chunkCount > maxChunkCount || header.totalSize > maxTotalSize) fail("ERR_TRUNCATED");
-  const key = header.flags & FLAG_ENCRYPTED ? decodeKey(options.key) : undefined;
   let offset = HEADER_SIZE;
   let metadata: MetadataEntry[] = [];
   let metaRegion: Uint8Array = Buffer.alloc(0);
   if (header.flags & FLAG_METADATA) ({ metadata, region: metaRegion, offset } = parseMetadata(container, offset, maxMetaBytes));
-  const root = createHash("sha256"); root.update(headerBytes); root.update(metaRegion);
+  const key = header.flags & FLAG_ENCRYPTED ? decodeKey(options.key) : undefined;
+  if (header.chunkCount > maxChunkCount || header.totalSize > maxTotalSize) fail("ERR_TRUNCATED");
+  const root = key ? createHmac("sha256", rootKey(key, header.baseNonce)) : createHash("sha256"); root.update(headerBytes); root.update(metaRegion);
+  const metadataDigest = createHash("sha256").update(metaRegion).digest();
   const chunks: Buffer[] = []; let totalSize = 0n;
   for (let index = 0n; index < header.chunkCount; index++) {
     if (offset + 4 > container.byteLength) fail("ERR_TRUNCATED");
@@ -340,13 +363,14 @@ export function decodeBytes(containerBytes: Uint8Array, options: DecodeOptions =
     if (length > maxChunkLen || offset + length > container.byteLength) fail("ERR_TRUNCATED");
     const body = Buffer.from(container.subarray(offset, offset + length)); offset += length;
     root.update(createHash("sha256").update(body).digest());
-    const plain = key ? open(key, header.baseNonce, headerBytes, index, body) : body;
+    const plain = key ? open(key, header.baseNonce, headerBytes, metadataDigest, index, body) : body;
     totalSize += BigInt(plain.byteLength);
     if (totalSize > header.totalSize) fail("ERR_ROOT_MISMATCH");
     chunks.push(plain);
   }
   if (offset + FOOTER_SIZE > container.byteLength || !container.subarray(offset + 32, offset + 36).equals(Buffer.from("UBCE"))) fail("ERR_TRUNCATED");
   if (totalSize !== header.totalSize || !timingSafeEqual(root.digest(), container.subarray(offset, offset + 32))) fail("ERR_ROOT_MISMATCH");
+  if (offset + FOOTER_SIZE !== container.byteLength) fail("ERR_TRAILING_DATA");
   return { data: Buffer.concat(chunks), meta: metadataView(metadata) };
 }
 
@@ -406,11 +430,18 @@ export async function inspectStream(source: Readable, options: Pick<DecodeOption
     const header = parseHeader(headerBytes);
     let metadata: MetadataEntry[] = [];
     if (header.flags & FLAG_METADATA) {
-      const prefix = await reader.read(4);
-      const length = prefix.readUInt32LE(0);
-      if (length > (options.maxMetaBytes ?? DEFAULT_MAX_META_BYTES)) fail("ERR_META_MALFORMED");
-      const region = Buffer.concat([prefix, await reader.read(length)]);
-      ({ metadata } = parseMetadata(region, 0, options.maxMetaBytes ?? DEFAULT_MAX_META_BYTES));
+      try {
+        const prefix = await reader.read(4);
+        const length = prefix.readUInt32LE(0);
+        if (length > (options.maxMetaBytes ?? DEFAULT_MAX_META_BYTES)) fail("ERR_META_MALFORMED");
+        const metadataBody = await reader.read(length);
+        const region = Buffer.concat([prefix, metadataBody]);
+        ({ metadata } = parseMetadata(region, 0, options.maxMetaBytes ?? DEFAULT_MAX_META_BYTES));
+      }
+      catch (error) {
+        if (error instanceof UbcError && error.code === "ERR_TRUNCATED") fail("ERR_META_MALFORMED");
+        throw error;
+      }
     }
     return { version: header.version, flags: { encrypted: Boolean(header.flags & FLAG_ENCRYPTED), hasMetadata: Boolean(header.flags & FLAG_METADATA) }, hashAlgo: header.hashAlgo, aeadAlgo: header.aeadAlgo, chunkSize: header.chunkSize, chunkCount: header.chunkCount, totalSize: header.totalSize, metadata: metadataView(metadata) };
   } finally {
@@ -494,8 +525,9 @@ export class Encoder extends Writable {
       const baseNonce = key === undefined ? Buffer.alloc(12) : this.options.baseNonce === undefined ? randomBytes(12) : asBuffer(this.options.baseNonce);
       if (baseNonce.byteLength !== 12) fail("ERR_RESERVED_BITS");
       const chunkCount = (this.totalSize + BigInt(chunkSize) - 1n) / BigInt(chunkSize);
-      const header = marshalHeader({ version: 1, flags: (key ? FLAG_ENCRYPTED : 0) | (metadata.byteLength ? FLAG_METADATA : 0), hashAlgo: 0, aeadAlgo: key ? 1 : 0, chunkSize, chunkCount, totalSize: this.totalSize, baseNonce });
-      const root = createHash("sha256"); root.update(header); root.update(metadata);
+      const header = marshalHeader({ version: 1, flags: (key ? FLAG_ENCRYPTED : 0) | (metadata.byteLength ? FLAG_METADATA : 0), hashAlgo: key ? 1 : 0, aeadAlgo: key ? 1 : 0, chunkSize, chunkCount, totalSize: this.totalSize, baseNonce });
+      const root = key ? createHmac("sha256", rootKey(key, baseNonce)) : createHash("sha256"); root.update(header); root.update(metadata);
+      const metadataDigest = createHash("sha256").update(metadata).digest();
       const path = await this.spoolPathPromise;
       const handle = await this.handlePromise;
       await handle.close();
@@ -507,7 +539,7 @@ export class Encoder extends Writable {
         const plain = Buffer.alloc(length);
         const { bytesRead } = await reader.read(plain, 0, length, null);
         if (bytesRead !== length) throw new Error("UBC plaintext spool was truncated");
-        const body = key ? seal(key, baseNonce, header, index, plain) : plain;
+        const body = key ? seal(key, baseNonce, header, metadataDigest, index, plain) : plain;
         const prefix = Buffer.alloc(4); prefix.writeUInt32LE(body.byteLength);
         await writeTo(this.sink, prefix); await writeTo(this.sink, body); root.update(createHash("sha256").update(body).digest());
       }
@@ -537,7 +569,8 @@ export class Decoder extends Transform {
   private offsetState: "header" | "metadata" | "payload" | "footer" | "done" = "header";
   private chunkIndex = 0n;
   private plainTotal = 0n;
-  private readonly root = createHash("sha256");
+  private root: ReturnType<typeof createHash> | ReturnType<typeof createHmac> = createHash("sha256");
+  private metadataDigest = createHash("sha256").update(Buffer.alloc(0)).digest();
   private readonly maxMetaBytes: number;
   private readonly maxChunkLen: number;
   private readonly maxChunkCount: bigint;
@@ -561,6 +594,7 @@ export class Decoder extends Transform {
 
   override _transform(chunk: Buffer, _encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
     try {
+      if (this.offsetState === "done" && chunk.byteLength > 0) fail("ERR_TRAILING_DATA");
       if (this.offsetState !== "done" && chunk.byteLength > 0) this.enqueue(chunk);
       this.process();
       this.finishOrDefer(callback, false);
@@ -597,7 +631,7 @@ export class Decoder extends Transform {
 
   private finishOrDefer(callback: (error?: Error | null) => void, flush: boolean): void {
     if (!this.outputBackpressured) {
-      if (flush && this.offsetState !== "done") fail("ERR_TRUNCATED");
+      if (flush && this.offsetState !== "done") fail(this.offsetState === "metadata" ? "ERR_META_MALFORMED" : "ERR_TRUNCATED");
       callback();
       return;
     }
@@ -618,7 +652,7 @@ export class Decoder extends Transform {
     const callback = this.takeDeferredCallback();
     if (callback === undefined) return;
     if (flush && this.offsetState !== "done") {
-      callback(new UbcError("ERR_TRUNCATED"));
+      callback(new UbcError(this.offsetState === "metadata" ? "ERR_META_MALFORMED" : "ERR_TRUNCATED"));
       return;
     }
     callback();
@@ -679,15 +713,22 @@ export class Decoder extends Transform {
   // Test-only invariant: fragmented input is represented by zero or one slab.
   private pendingSegmentCount(): number { return this.bufferedBytes === 0 ? 0 : 1; }
 
+  private initializePayload(): void {
+    if (this.header!.flags & FLAG_ENCRYPTED) {
+      this.key = decodeKey(this.options.key);
+      this.root = createHmac("sha256", rootKey(this.key, this.header!.baseNonce));
+    }
+    if (this.header!.chunkCount > this.maxChunkCount || this.header!.totalSize > this.maxTotalSize) fail("ERR_TRUNCATED");
+    this.root.update(this.headerBytes!);
+  }
+
   private process(): void {
     while (true) {
       if (this.offsetState === "header") {
         if (this.bufferedBytes < HEADER_SIZE) return;
         this.headerBytes = Buffer.from(this.consume(HEADER_SIZE)); this.header = parseHeader(this.headerBytes);
-        if (this.header.chunkCount > this.maxChunkCount || this.header.totalSize > this.maxTotalSize) fail("ERR_TRUNCATED");
-        if (this.header.flags & FLAG_ENCRYPTED) this.key = decodeKey(this.options.key);
-        this.root.update(this.headerBytes);
         this.offsetState = this.header.flags & FLAG_METADATA ? "metadata" : "payload";
+        if (this.offsetState === "payload") this.initializePayload();
       }
       if (this.offsetState === "metadata") {
         if (this.bufferedBytes < 4) return;
@@ -695,7 +736,7 @@ export class Decoder extends Transform {
         if (length > this.maxMetaBytes) fail("ERR_META_MALFORMED");
         if (this.bufferedBytes < length + 4) return;
         const parsed = parseMetadata(this.peek(length + 4), 0, this.maxMetaBytes);
-        this.consume(length + 4); this.metadata = parsed.metadata; this.root.update(parsed.region); this.offsetState = "payload";
+        this.consume(length + 4); this.metadata = parsed.metadata; this.metadataDigest = createHash("sha256").update(parsed.region).digest(); this.initializePayload(); this.root.update(parsed.region); this.offsetState = "payload";
       }
       if (this.offsetState === "payload") {
         if (this.chunkIndex === this.header!.chunkCount) { this.offsetState = "footer"; continue; }
@@ -705,7 +746,7 @@ export class Decoder extends Transform {
         if (this.bufferedBytes < length + 4) return;
         this.consume(4); const body = Buffer.from(this.consume(length));
         this.root.update(createHash("sha256").update(body).digest());
-        const plain = this.key ? open(this.key, this.header!.baseNonce, this.headerBytes!, this.chunkIndex, body) : body;
+        const plain = this.key ? open(this.key, this.header!.baseNonce, this.headerBytes!, this.metadataDigest, this.chunkIndex, body) : body;
         this.plainTotal += BigInt(plain.byteLength);
         if (this.plainTotal > this.header!.totalSize) fail("ERR_ROOT_MISMATCH");
         this.chunkIndex++;
@@ -721,7 +762,7 @@ export class Decoder extends Transform {
         if (!footer.subarray(32).equals(Buffer.from("UBCE"))) fail("ERR_TRUNCATED");
         if (this.plainTotal !== this.header!.totalSize || !timingSafeEqual(this.root.digest(), footer.subarray(0, 32))) fail("ERR_ROOT_MISMATCH");
         this.offsetState = "done";
-        this.discardBuffered();
+        if (this.bufferedBytes !== 0) fail("ERR_TRAILING_DATA");
         return;
       }
       return;

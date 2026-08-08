@@ -35,24 +35,15 @@ resumes across runs without re-deriving context. See [AGENTS.md](../AGENTS.md) f
 - [x] Phase 1: Go SDK DoS caps on untrusted length fields — checker-confirmed 2026-08-07
 - [x] Phase 1: Node SDK full conformance implementation — checker-confirmed 2026-08-08
 - [x] Phase 1: Cross-decode Go ↔ Node — checker-confirmed 2026-08-08
+- [x] RFC 0001 authenticated encrypted roots and canonical grammar — checker-confirmed 2026-08-08
 - [x] Git repository initialized with initial spec/docs commit
 
 ## Open issues / blockers
-- [!] Freeze format v1 — human decision required before Phase 2:
-  - `root_hash` is unkeyed, while AES-GCM AAD covers `header_bytes || le64(i)` but not
-    metadata. An attacker can alter encrypted metadata, recompute the root hash, and pass
-    verification; an encrypted empty container also has no AEAD operation that confirms
-    the supplied key. Resolve through an RFC/spec+vector change before freezing.
-  - Clarify the canonical accept/reject grammar for an empty metadata block, trailing bytes,
-    and when streaming plaintext may be released relative to final root verification.
-  - Draft proposal: `rfcs/0001-authenticated-encrypted-roots.md` — awaiting human acceptance.
-  - Release audit (2026-08-08): origin has only the initial `main` branch and no tags;
-    `@ubc/node` is not published to npm; `github.com/ubc/vectors` is not publicly resolvable.
-    Human confirmation of no out-of-band artifacts or downstream consumers is still required.
+- (none; RFC 0001 was accepted by the human on 2026-08-08 after the release audit.)
 
 ## Next (ordered)
-- [ ] Freeze format v1 — final human review of SPEC.md; no byte-layout changes after this
-      without an RFC. Blocked by the recorded authentication and grammar decisions.
+- [x] Freeze v1 format after RFC 0001 acceptance and checker confirmation — 2026-08-08.
+      No byte-layout changes after this point without an RFC.
 
 ---
 
