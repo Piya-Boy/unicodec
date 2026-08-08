@@ -1,0 +1,38 @@
+sdk/python/ubc/crypto.py
+  s_b5e039af0bb7f6::t_23400ffa11a0ac 1-169
+docs/ROADMAP.md
+  s_b5e039af0bb7f6::t_17f5fe2fbfc9e9 36
+  s_9af376bc89b9d6::t_4c15aba8da649f 31,34-35
+sdk/python/ubc/__init__.py
+  s_b5e039af0bb7f6::t_23400ffa11a0ac 27,51-52
+sdk/python/tests/test_crypto.py
+  s_b5e039af0bb7f6::t_63a56ce5577909 1-80,86-99
+  s_b5e039af0bb7f6::t_2eb522cbf34fcc 81-85
+sdk/python/ubc/payload.py
+  s_b5e039af0bb7f6::t_63a56ce5577909 32
+  s_b5e039af0bb7f6::t_23400ffa11a0ac 35-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1adf0b4f5885c83396ae75c2ff9330e99c0aca70",
+  "prompts": {},
+  "sessions": {
+    "s_9af376bc89b9d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe2ef-c33b-77e1-b2df-af669badc766",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_b5e039af0bb7f6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe2ec-2b19-7ef0-8f1d-3f81c67040cf",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
