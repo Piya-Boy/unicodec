@@ -11,27 +11,38 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-Close the Go/Node API-parity gap found in the crypto review (2026-08-08). Go is missing
-public APIs that docs/API.md and the Node SDK already expose — a cross-language surface
-gap (SECURITY.md §6). No format change; no RFC needed.
+**Phase 2 — CLI.** Build `ubc`, a single Go binary over the Go SDK (no new crypto/format).
+Streaming-first: read from a file or stdin, write to a file or stdout, so large inputs are
+never fully buffered. Exit codes: `0` ok, `1` verification/format failure (print the stable
+error id to stderr), `2` usage error. Keys come from a file or env var, never a CLI flag
+value (avoid leaking keys in shell history / process list).
 
-- [x] Go SDK: `Verify(source, opts) VerifyReport` — drains decoder without releasing
-      plaintext; reports first stable error id. Added sdk/go/verify.go (human-reviewed).
-- [x] Go SDK: `Inspect(source) ContainerInfo` — header + metadata only, no payload read,
-      no plaintext. Match docs/API.md §2.5 and Node `inspect()`.
-      (checker-confirmed 2026-08-08; Go test, vet, race, vectorgen check)
-- [x] Go SDK: `DecodeBytes(container, opts) ([]byte, []MetadataEntry, error)` one-shot —
-      drain NewDecoder to EOF; reuse Decoder (no duplicated crypto); byte-identical
-      round-trip; parity with Node `decodeBytes()`.
-      (checker-confirmed 2026-08-08; Go test, vet, race, vectorgen check)
-- [x] Sync docs/API.md and docs/SDK.md to the REAL Go surface (Encode*/Verify/Inspect/
-      DecodeBytes/NewEncoder/NewDecoder). No claimed-but-absent APIs.
-      Maker: gpt-5.6-luna · Checker: gpt-5.6-sol — confirmed 2026-08-08
-- [x] Add Go conformance test: Inspect and DecodeBytes agree with the streaming Decoder
-      and all 12 shared positive vectors — checker-confirmed 2026-08-08.
+- [ ] CLI scaffold: `cli/` package, arg parsing, `ubc <verb> [flags]`, `--help`, version.
+      Global flags: `-in <path|->`, `-out <path|->`, `-key-file <path>` / `UBC_KEY` env,
+      `-chunk-size`. Goal: `ubc --help` and each subcommand's help render; usage error = exit 2.
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] `ubc encode` — stream stdin/file → container; optional metadata (`-name`, `-mime`);
+      encrypt when a key is provided. Goal: output byte-identical to the Go SDK for the
+      same input+options; matches encrypted vectors when `-base-nonce` is fixed (test-only).
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] `ubc decode` — container → plaintext; require key iff encrypted; fail closed.
+      Goal: round-trips every positive vector; negative vectors exit 1 with the exact
+      error id on stderr; no plaintext emitted on failure.
+      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
+- [ ] `ubc verify` — integrity/auth only, never writes plaintext. Goal: prints ok/fail +
+      error id; exit 0/1; matches Go `Verify` on all vectors.
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] `ubc inspect` — print header + metadata (human text + `-json`), no payload read,
+      no key. Goal: fields match Go `Inspect`/ContainerInfo across vectors.
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] CLI conformance tests: drive the binary over the shared vectors (encode/decode/
+      verify/inspect), asserting bytes, exit codes, and stderr error ids. No bespoke
+      expected values — reuse spec/vectors.
+      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
 
-When "Active work" is empty and Go/Node surfaces match, merge feature/node-sdk-conformance
-to main (human gate), then start Phase 2.
+Phase 2 exit gate: `ubc` does all four verbs end-to-end, streams without buffering whole
+files, output matches the SDK/vectors byte-for-byte, negative cases exit non-zero with the
+correct stable error id. Then update Phase 2 below and stop for human review.
 
 ---
 
