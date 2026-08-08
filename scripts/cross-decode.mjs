@@ -11,6 +11,8 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const vectorsRoot = resolve(repoRoot, "spec", "vectors");
 const caseIDs = ["plain-one-byte", "plain-chunk-1m-plus-one", "plain-metadata", "encrypted-one-byte", "encrypted-chunk-1m-plus-one", "encrypted-metadata"];
 const nodeModule = resolve(repoRoot, "sdk", "node", "dist", "src", "index.js");
+const pythonDriver = resolve(repoRoot, "scripts", "cross-decode-python.py");
+const pythonCommand = process.env.PYTHON ?? "python";
 
 function safeId(value) {
   return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
@@ -87,7 +89,8 @@ async function main() {
       await writeFile(safeChild(workDir, `${id}.node.ubc`), nodeFresh, { mode: 0o600 });
     }
 
-    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")], { cwd: repoRoot });
+    await execFile(pythonCommand, [pythonDriver, "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--write"], { cwd: repoRoot });
+    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python"], { cwd: repoRoot });
 
     for (const id of caseIDs) {
       const vector = byID.get(id);
@@ -96,13 +99,20 @@ async function main() {
       const options = encodeOptions(vector.options);
       const goFresh = await readFile(safeChild(workDir, `${id}.go.ubc`));
       const nodeFresh = await readFile(safeChild(workDir, `${id}.node.ubc`));
+      const pythonFresh = await readFile(safeChild(workDir, `${id}.python.ubc`));
       const decoded = decodeBytes(goFresh, options.key === undefined ? {} : { key: options.key });
+      const pythonDecoded = decodeBytes(pythonFresh, options.key === undefined ? {} : { key: options.key });
 
       assert.ok(decoded.data.equals(input), `${id}: Go-decoded plaintext differs from manifest input`);
       assertMetadata(decoded.meta, entries);
+      assert.ok(pythonDecoded.data.equals(input), `${id}: Python-decoded plaintext differs from manifest input`);
+      assertMetadata(pythonDecoded.meta, entries);
       assert.ok(encodeBytes(decoded.data, decoded.meta, options).equals(nodeFresh), `${id}: Node re-encode is not byte-identical`);
+      assert.ok(encodeBytes(pythonDecoded.data, pythonDecoded.meta, options).equals(nodeFresh), `${id}: Python-to-Node re-encode is not byte-identical`);
       assert.ok(goFresh.equals(nodeFresh), `${id}: fresh Go and Node containers differ`);
+      assert.ok(goFresh.equals(pythonFresh), `${id}: fresh Go and Python containers differ`);
     }
+    await execFile(pythonCommand, [pythonDriver, "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--verify"], { cwd: repoRoot });
     process.stdout.write(`Cross-decode passed: ${caseIDs.join(", ")}\n`);
   } finally {
     await rm(workDir, { recursive: true, force: true });

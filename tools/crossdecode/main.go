@@ -51,17 +51,18 @@ func main() {
 	vectorsRoot := flag.String("vectors", "", "path to spec/vectors")
 	workDir := flag.String("work", "", "isolated cross-decode work directory")
 	casesValue := flag.String("cases", "", "comma-separated approved vector IDs")
+	python := flag.Bool("python", false, "also verify Python-produced containers")
 	flag.Parse()
 
 	if flag.NArg() != 0 {
 		die("unexpected positional arguments")
 	}
-	if err := run(*vectorsRoot, *workDir, *casesValue); err != nil {
+	if err := run(*vectorsRoot, *workDir, *casesValue, *python); err != nil {
 		die("cross-decode: %v", err)
 	}
 }
 
-func run(vectorsRoot, workDir, casesValue string) error {
+func run(vectorsRoot, workDir, casesValue string, verifyPython bool) error {
 	root, err := existingDirectory(vectorsRoot, "vectors")
 	if err != nil {
 		return err
@@ -87,7 +88,7 @@ func run(vectorsRoot, workDir, casesValue string) error {
 		if vector.ExpectError != nil {
 			return fmt.Errorf("negative vector case %q is not allowed", id)
 		}
-		if err := crossDecodeCase(root, work, vector); err != nil {
+		if err := crossDecodeCase(root, work, vector, verifyPython); err != nil {
 			return fmt.Errorf("%s: %w", id, err)
 		}
 	}
@@ -172,7 +173,7 @@ func readManifest(root string) (map[string]vector, error) {
 	return vectors, nil
 }
 
-func crossDecodeCase(vectorsRoot, workDir string, vector vector) error {
+func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython bool) error {
 	if vector.Input == "" {
 		return fmt.Errorf("positive vector has no input")
 	}
@@ -235,6 +236,33 @@ func crossDecodeCase(vectorsRoot, workDir string, vector vector) error {
 	}
 	if !bytes.Equal(goFresh, nodeFresh) {
 		return fmt.Errorf("fresh Go and Node containers differ")
+	}
+	if verifyPython {
+		pythonPath, err := safeChild(workDir, vector.ID+".python.ubc")
+		if err != nil {
+			return err
+		}
+		pythonFresh, err := os.ReadFile(pythonPath)
+		if err != nil {
+			return fmt.Errorf("read Python container: %w", err)
+		}
+		decoder, err := ubc.NewDecoder(bytes.NewReader(pythonFresh), ubc.DecodeOptions{Key: key})
+		if err != nil {
+			return fmt.Errorf("decode Python container: %w", err)
+		}
+		decoded, err := io.ReadAll(decoder)
+		if err != nil {
+			return fmt.Errorf("read Python container: %w", err)
+		}
+		if !bytes.Equal(decoded, input) {
+			return fmt.Errorf("Python-decoded plaintext differs from manifest input")
+		}
+		if !equalMetadata(decoder.Metadata(), entries) {
+			return fmt.Errorf("Python-decoded metadata differs from manifest metadata")
+		}
+		if !bytes.Equal(goFresh, pythonFresh) {
+			return fmt.Errorf("fresh Go and Python containers differ")
+		}
 	}
 	return nil
 }

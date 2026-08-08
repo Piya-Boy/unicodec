@@ -11,38 +11,46 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-**Phase 2 — CLI.** Build `ubc`, a single Go binary over the Go SDK (no new crypto/format).
-Streaming-first: read from a file or stdin, write to a file or stdout, so large inputs are
-never fully buffered. Exit codes: `0` ok, `1` verification/format failure (print the stable
-error id to stderr), `2` usage error. Keys come from a file or env var, never a CLI flag
-value (avoid leaking keys in shell history / process list).
+**Phase 3 — Python SDK.** Port the frozen format to `sdk/python/`. The Go SDK and the
+shared vectors in spec/vectors are the contract — the port must match byte-for-byte and
+cross-decode with Go/Node. Stdlib crypto only (`hashlib`, `hmac`, and AES-256-GCM from the
+`cryptography` package — the one accepted dependency; no custom crypto). No format change.
+Handle 64-bit fields as real Python ints (no float coercion). Keep the public API
+equivalent to Go/Node: encode/decode (one-shot), streaming encoder/decoder, verify,
+inspect. Same stable error identifiers (SPEC.md §5).
 
-- [x] CLI scaffold: `cli/` package, arg parsing, `ubc <verb> [flags]`, `--help`, version. (checker-confirmed 2026-08-08)
-      Global flags: `-in <path|->`, `-out <path|->`, `-key-file <path>` / `UBC_KEY` env,
-      `-chunk-size`. Goal: `ubc --help` and each subcommand's help render; usage error = exit 2.
+- [x] Python scaffold: `sdk/python/` package layout, pyproject, error types mapping every
+      stable error id, header + TLV encode/parse. Goal: header/TLV round-trip; matches the
+      header/metadata bytes in the shared vectors. (checker-confirmed 2026-08-09)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [x] `ubc encode` — stream stdin/file → container; optional metadata (`-name`, `-mime`); (checker-confirmed 2026-08-08)
-      encrypt when a key is provided. Goal: output byte-identical to the Go SDK for the
-      same input+options; matches encrypted vectors when `-base-nonce` is fixed (test-only).
+- [x] Python plain path: chunking + SHA-256 flat root; one-shot encode/decode.
+      Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
+      (human-verified byte-exact vs all plain vectors incl. metadata; 11 tests /
+      36 subtests pass; DoS caps enforced. 2026-08-09)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [x] `ubc decode` — container → plaintext; require key iff encrypted; fail closed. (checker-confirmed 2026-08-08)
-      Goal: round-trips every positive vector; negative vectors exit 1 with the exact
-      error id on stderr; no plaintext emitted on failure.
-      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
-- [x] `ubc verify` — integrity/auth only, never writes plaintext. (checker-confirmed 2026-08-09) Goal: prints ok/fail +
-      error id; exit 0/1; matches Go `Verify` on all vectors.
+- [x] Python encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+      sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
+      Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
+      plaintext on failure. (checker-confirmed 2026-08-09; all encrypted shared vectors
+      byte-exact, exact negative error ids, 15 tests pass, security review clean.)
+      CRYPTO-CRITICAL — checker MUST differ from maker.
+      Maker: gpt-5.6-sol · Checker: gpt-5.6-terra
+- [x] Python streaming encoder/decoder + verify + inspect; DoS caps on untrusted lengths.
+      Goal: streaming output identical to one-shot; fail-closed; caps enforced pre-alloc.
+      (checker-confirmed 2026-08-09; positive vectors byte-exact, negative vectors return
+      exact error ids, 22 tests pass, DoS caps and small-read regression verified,
+      security review clean.)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [x] `ubc inspect` — print header + metadata (human text + `-json`), no payload read, (checker-confirmed 2026-08-09)
-      no key. Goal: fields match Go `Inspect`/ContainerInfo across vectors.
+- [x] Python conformance + cross-decode: run all shared vectors (positive byte-exact,
+      negative with exact error ids); decode Go/Node containers and vice versa.
+      Goal: 100% vector pass; cross-decode Go↔Node↔Python green.
+      (checker-confirmed 2026-08-09; Python 22 tests, Node 55 tests, Go test/vet/race,
+      vector generator, and Go↔Node↔Python cross-decode passed; security review clean.)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [x] CLI conformance tests: drive the binary over the shared vectors (encode/decode/
-      verify/inspect), asserting bytes, exit codes, and stderr error ids. (checker-confirmed 2026-08-09) No bespoke
-      expected values — reuse spec/vectors.
-      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
 
-Phase 2 exit gate: `ubc` does all four verbs end-to-end, streams without buffering whole
-files, output matches the SDK/vectors byte-for-byte, negative cases exit non-zero with the
-correct stable error id. Then update Phase 2 below and stop for human review.
+Phase 3 (Python) exit gate: sdk/python passes 100% of shared vectors byte-exact, rejects
+negatives with exact error ids, cross-decodes with Go and Node, stdlib/cryptography only,
+public API equivalent to Go/Node. Then stop for human review before the next SDK (Rust).
 
 ---
 
@@ -77,7 +85,7 @@ Exit criteria: CLI usable end-to-end; verified against vectors.
 ## Phase 3 — SDK expansion
 
 Port from frozen spec + shared vectors (mechanical once Phase 1 holds):
-- [ ] Python
+- [x] Python
 - [ ] Rust
 - [ ] Java
 - [ ] .NET
