@@ -1,0 +1,47 @@
+sdk/python/tests/test_plain.py
+  s_33b404a718b9a7::t_6de502d005f52e 1-4,6-7,22-81
+  s_41a68eb4140d5a::t_dce6b392160ed7 5,8,10-13,17-21,82-122
+  s_cab4144c5ee8b1::t_99c00d569b4ad3 9,144
+  s_cab4144c5ee8b1::t_acef330f100d47 14-16,123-143,145-148
+sdk/python/ubc/payload.py
+  s_cab4144c5ee8b1::t_acef330f100d47 99-103
+  s_33b404a718b9a7::t_6de502d005f52e 1-8,10-15,20-23,44-78,83,89-95,97-98,104-113,115,118-132
+  s_41a68eb4140d5a::t_dce6b392160ed7 9,16-19,24-43,79-82,84-88,96,114,116-117
+sdk/python/ubc/__init__.py
+  s_33b404a718b9a7::t_6de502d005f52e 31,48-49
+  s_41a68eb4140d5a::t_dce6b392160ed7 17-26,32-36
+sdk/python/ubc/metadata.py
+  s_41a68eb4140d5a::t_dce6b392160ed7 37-41,46-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "24fe787ebec56efdc8ddd40d7616356489a314d4",
+  "prompts": {},
+  "sessions": {
+    "s_33b404a718b9a7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe2b4-5a54-7302-ae23-1e819fddcb99",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_41a68eb4140d5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe2c1-d6cd-7721-8e2c-64e797d21382",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_cab4144c5ee8b1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe2cd-785f-7e40-adde-821535dd042d",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
