@@ -19,9 +19,9 @@ Handle 64-bit fields as real Python ints (no float coercion). Keep the public AP
 equivalent to Go/Node: encode/decode (one-shot), streaming encoder/decoder, verify,
 inspect. Same stable error identifiers (SPEC.md §5).
 
-- [ ] Python scaffold: `sdk/python/` package layout, pyproject, error types mapping every
+- [x] Python scaffold: `sdk/python/` package layout, pyproject, error types mapping every
       stable error id, header + TLV encode/parse. Goal: header/TLV round-trip; matches the
-      header/metadata bytes in the shared vectors.
+      header/metadata bytes in the shared vectors. (checker-confirmed 2026-08-09)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
 - [ ] Python plain path: chunking + SHA-256 flat root; one-shot encode/decode.
       Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
