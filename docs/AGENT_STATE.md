@@ -7,10 +7,23 @@ resumes across runs without re-deriving context. See [AGENTS.md](../AGENTS.md) f
 
 ---
 
-## Current phase: 1 — Reference implementations + vectors (technical gate complete)
+## Current phase: 1 — Reference implementations + vectors (API-parity gap being closed)
 
 ## In progress
-- (none)
+- [~] Go SDK: Verify(source, opts) VerifyReport — added in sdk/go/verify.go (human-reviewed
+      2026-08-08); closes the Go/Node parity gap for two-pass verification. Awaiting checker.
+
+## API-parity backlog (Go missing vs docs/API.md and Node)
+- [ ] Go SDK: Inspect(source) ContainerInfo — read header+metadata, no payload read.
+      Goal: matches Node inspect(); no plaintext; same fields as ContainerInfo (API.md §2.5).
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] Go SDK: DecodeBytes(container, opts) ([]byte, []MetadataEntry, error) one-shot.
+      Goal: equivalent to draining NewDecoder to EOF; byte-identical round-trip; parity with
+      Node decodeBytes(). Reuse the Decoder; do not duplicate verification logic.
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] Sync docs/API.md and docs/SDK.md with the actual Go surface (Encode*/Verify/Inspect/
+      DecodeBytes/NewEncoder/NewDecoder). No claimed-but-absent APIs.
+      Maker: gpt-5.6-luna · Checker: gpt-5.6-sol
 
 ## Done
 - [x] PRD.md
