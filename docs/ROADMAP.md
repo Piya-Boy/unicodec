@@ -41,10 +41,12 @@ inspect. Same stable error identifiers (SPEC.md §5).
       exact error ids, 22 tests pass, DoS caps and small-read regression verified,
       security review clean.)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] Python conformance + cross-decode: run all shared vectors (positive byte-exact,
+- [x] Python conformance + cross-decode: run all shared vectors (positive byte-exact,
       negative with exact error ids); decode Go/Node containers and vice versa.
       Goal: 100% vector pass; cross-decode Go↔Node↔Python green.
-      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
+      (checker-confirmed 2026-08-09; Python 22 tests, Node 55 tests, Go test/vet/race,
+      vector generator, and Go↔Node↔Python cross-decode passed; security review clean.)
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
 
 Phase 3 (Python) exit gate: sdk/python passes 100% of shared vectors byte-exact, rejects
 negatives with exact error ids, cross-decodes with Go and Node, stdlib/cryptography only,
@@ -83,7 +85,7 @@ Exit criteria: CLI usable end-to-end; verified against vectors.
 ## Phase 3 — SDK expansion
 
 Port from frozen spec + shared vectors (mechanical once Phase 1 holds):
-- [ ] Python
+- [x] Python
 - [ ] Rust
 - [ ] Java
 - [ ] .NET
