@@ -1,0 +1,35 @@
+scripts/cross-decode-python.py
+  s_0b839ab7a7f8c5::t_e63bfd37d9a585 1-163
+docs/ROADMAP.md
+  s_25944c94d56663::t_d35d8da32bf4ee 44,47-48,88
+  s_25944c94d56663::t_251dacf7fb7d97 49
+scripts/cross-decode.mjs
+  s_0b839ab7a7f8c5::t_e63bfd37d9a585 14-15,92-93,102,104,108-109,111,113,115
+tools/crossdecode/main.go
+  s_0b839ab7a7f8c5::t_e63bfd37d9a585 54,60,65,91,176,240-265
+  s_0b839ab7a7f8c5::t_2bcd48d4d6f6ac 266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1b5961bfd2a5a46bdaab388c245b25b684c48568",
+  "prompts": {},
+  "sessions": {
+    "s_0b839ab7a7f8c5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe326-f977-72d0-afc0-331cf8c9dab7",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_25944c94d56663": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe32b-1204-7402-bb2f-0c2e571b5898",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
