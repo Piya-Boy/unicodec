@@ -1,0 +1,107 @@
+docs/SECURITY.md
+  s_979a62fa9b30eb::t_4ce8bf7465473d 13,15,34-35,87
+  s_979a62fa9b30eb::t_d2fc22bc6cfa0f 29-31
+  s_979a62fa9b30eb::t_c1e5df8e53994b 62-63
+sdk/go/header.go
+  s_979a62fa9b30eb::t_699a201c600d83 12,14-15,84,96
+  s_979a62fa9b30eb::t_77531cd6e70f1b 16-17,91
+sdk/go/crypto_test.go
+  s_979a62fa9b30eb::t_b92c81f48d219a 5,7,32-42,48,52-59,63,67-68,72-73,75
+  s_979a62fa9b30eb::t_be16dd9c44b7f9 81,86
+  s_979a62fa9b30eb::t_24dadbc9695e3c 43-47,49-51,60-62,64-66,69-71,74
+  s_979a62fa9b30eb::t_4dcb22ad107fa4 76
+sdk/node/test/conformance.test.ts
+  s_979a62fa9b30eb::t_1da35522f954ce 189-196
+  s_979a62fa9b30eb::t_a22908b6dd1ee5 245-248,250-258
+  s_979a62fa9b30eb::t_d6a8b119729dfa 187-188,197-198
+  s_979a62fa9b30eb::t_643662d688ffd2 249
+  s_979a62fa9b30eb::t_1f1cdada1af475 278-287
+rfcs/0001-authenticated-encrypted-roots.md
+  s_979a62fa9b30eb::t_c1e5df8e53994b 3
+sdk/go/crypto.go
+  s_979a62fa9b30eb::t_699a201c600d83 6,19-31,33,38,48,51,61,86,97,103,114-118
+docs/API.md
+  s_979a62fa9b30eb::t_4ce8bf7465473d 102
+sdk/go/meta_test.go
+  s_979a62fa9b30eb::t_d02ffc80a2638c 59-63,65-71
+  s_979a62fa9b30eb::t_643662d688ffd2 64
+docs/TESTING.md
+  s_979a62fa9b30eb::t_4ce8bf7465473d 52-53,67-68
+tools/vectorgen/main.go
+  s_979a62fa9b30eb::t_aecdc07c53e1fc 234,241-245,455,461,469-471
+  s_979a62fa9b30eb::t_9c3c68cd6e15b0 7,54,58-62,178,212,263,285,291,300-310,340-351,353
+  s_979a62fa9b30eb::t_51d8b3248009a5 56,454,456-460,462-463,479-500
+  s_979a62fa9b30eb::t_f1a7938091a41b 199-200,227-230,233,438-453,464-468,472,478
+  s_979a62fa9b30eb::t_6f6936f50fc6b4 53,55,224-226,429-437
+  s_979a62fa9b30eb::t_c034bd949488c0 231-232,473-477
+  s_979a62fa9b30eb::t_47a4023f99ec1f 57
+spec/SPEC.md
+  s_979a62fa9b30eb::t_4ce8bf7465473d 42,44,60-61,68-69,92-93,116,132,148-150,158,163,172-180,182-185,202,208
+  s_979a62fa9b30eb::t_643662d688ffd2 99-100
+  s_979a62fa9b30eb::t_d2fc22bc6cfa0f 186-188,220-230
+  s_979a62fa9b30eb::t_e410228fb6a103 231
+sdk/go/meta.go
+  s_979a62fa9b30eb::t_699a201c600d83 8,30-32,50,65-69,74-77,79-100
+  s_979a62fa9b30eb::t_ede210b7192e94 78
+  s_979a62fa9b30eb::t_9f50a245c07f42 4
+docs/SDK.md
+  s_979a62fa9b30eb::t_4ce8bf7465473d 98
+sdk/go/errors.go
+  s_979a62fa9b30eb::t_699a201c600d83 17,41
+sdk/go/encoder.go
+  s_979a62fa9b30eb::t_699a201c600d83 98,116,118-122,138,152,154
+  s_979a62fa9b30eb::t_be16dd9c44b7f9 117
+  s_979a62fa9b30eb::t_86ac487ce7b429 4
+docs/ALGORITHM.md
+  s_979a62fa9b30eb::t_c1e5df8e53994b 56-58,76-77,87,99-101,119-120
+docs/AGENT_STATE.md
+  s_979a62fa9b30eb::t_81e85340e5a804 38,45-46
+  s_979a62fa9b30eb::t_5d244a10996f2b 42
+spec/vectors/vectors.json
+  s_979a62fa9b30eb::t_faa197bde8161f 336
+  s_979a62fa9b30eb::t_71ca28946abf3b 340-353
+  s_979a62fa9b30eb::t_d65b21ed10af29 4,106,289-290,295-297,302-304,310-335,337-339,354-369
+  s_979a62fa9b30eb::t_23d7e0e31d7cf8 3,5-10,119,132,145,158,189,210,252,259,291-294,298-301,305-309
+tools/vectorgen/main_test.go
+  s_979a62fa9b30eb::t_275b4e1e32b127 4-5,18-20,24,31-33,37-39
+  s_979a62fa9b30eb::t_faa197bde8161f 21-23,25-30,34-36
+  s_979a62fa9b30eb::t_828ad3644a3cf4 7
+  s_979a62fa9b30eb::t_d83df9017257f7 40
+sdk/go/decoder.go
+  s_979a62fa9b30eb::t_699a201c600d83 5,67,111,179-182,207,210-222,227-231
+  s_979a62fa9b30eb::t_6cc78c8047e7aa 64-66,68-77,110,114-115,119,121-125
+  s_979a62fa9b30eb::t_705512ced2ba1d 98
+  s_979a62fa9b30eb::t_ede210b7192e94 116-118
+  s_979a62fa9b30eb::t_cf408cbd1684fa 232-233
+sdk/node/src/index.ts
+  s_979a62fa9b30eb::t_77f85173eda91b 716-720,722-724,731,739
+  s_979a62fa9b30eb::t_9cce9a0865ac13 355
+  s_979a62fa9b30eb::t_1da35522f954ce 433-440
+  s_979a62fa9b30eb::t_583ce0478e2bfb 5,24
+  s_979a62fa9b30eb::t_56e3206472a34c 528-530,542,572-573,597,749,765
+  s_979a62fa9b30eb::t_35e6c73f5dc390 23,171,179-180,183-186,246,262,273-275,288-295,298,301,303,307,309,311,328,330-331,335,357-358,366,373
+  s_979a62fa9b30eb::t_ede210b7192e94 181-182,356,721
+  s_979a62fa9b30eb::t_77531cd6e70f1b 174
+  s_979a62fa9b30eb::t_3d1b9dedb20658 441-444,634,655
+sdk/go/streaming_test.go
+  s_979a62fa9b30eb::t_511aaaec515e47 47,184-185
+  s_979a62fa9b30eb::t_734591e1a6a823 218,225,233,239,284,292,301,308
+  s_979a62fa9b30eb::t_c034bd949488c0 186-187
+  s_979a62fa9b30eb::t_89577089777b2f 182-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "97f25819e6a6389e9dbcb7b9a26ab208a351d548",
+  "prompts": {},
+  "sessions": {
+    "s_979a62fa9b30eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe127-a91a-7133-8e49-dd5b42adf542",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
