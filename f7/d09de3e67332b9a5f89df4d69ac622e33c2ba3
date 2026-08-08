@@ -1,0 +1,19 @@
+docs/AGENT_STATE.md
+  s_979a62fa9b30eb::t_6ba64c2b57cc05 41-47,51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f7d09de3e67332b9a5f89df4d69ac622e33c2ba3",
+  "prompts": {},
+  "sessions": {
+    "s_979a62fa9b30eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe127-a91a-7133-8e49-dd5b42adf542",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
