@@ -7,7 +7,7 @@ resumes across runs without re-deriving context. See [AGENTS.md](../AGENTS.md) f
 
 ---
 
-## Current phase: 0 — Specification
+## Current phase: 1 — Reference implementations + vectors (technical gate complete)
 
 ## In progress
 - (none)
@@ -26,49 +26,39 @@ resumes across runs without re-deriving context. See [AGENTS.md](../AGENTS.md) f
 - [x] docs/RFC.md
 - [x] docs/FAQ.md
 - [x] AGENTS.md — autonomous agent guide
+- [x] Phase 1: Test vectors FIRST (Go canonical generator) — checker-confirmed 2026-08-07
+- [x] Phase 1: Go SDK header encode/decode + validation — checker-confirmed 2026-08-07
+- [x] Phase 1: Go SDK metadata TLV — checker-confirmed 2026-08-07
+- [x] Phase 1: Go SDK plain payload chunking + flat root hash — checker-confirmed 2026-08-07
+- [x] Phase 1: Go SDK AES-256-GCM per-chunk — checker-confirmed 2026-08-07
+- [x] Phase 1: Go SDK streaming Encoder/Decoder — checker-confirmed 2026-08-07
+- [x] Phase 1: Go SDK DoS caps on untrusted length fields — checker-confirmed 2026-08-07
+- [x] Phase 1: Node SDK full conformance implementation — checker-confirmed 2026-08-08
+- [x] Phase 1: Cross-decode Go ↔ Node — checker-confirmed 2026-08-08
+- [x] Git repository initialized with initial spec/docs commit
 
 ## Open issues / blockers
-- (none)
+- Freeze format v1 requires final human review of `spec/SPEC.md` before Phase 2 starts.
 
 ## Next (ordered)
 - [ ] Freeze format v1 — final human review of SPEC.md; no byte-layout changes after this
       without an RFC. Goal: spec reviewed, zero open format questions.
-- [ ] git init + initial commit of spec/docs (branch, not main)
 
 ---
 
 ## Phase 1 — Reference implementations + vectors (queued)
 
 ### Next (ordered)
-- [ ] Go SDK: header encode/decode + validation
-      Goal: header round-trips; negative headers reject with exact error ids (SPEC.md §5).
-      Maker: gpt-5.6-sol · Checker: gpt-5.5
-- [ ] Go SDK: metadata TLV (ascending tag, no-dup, pass-through unknown)
-      Goal: TLV round-trips; malformed/out-of-order/dup → ERR_META_MALFORMED.
-      Maker: gpt-5.6-terra · Checker: gpt-5.5
-- [ ] Go SDK: plain payload chunking + flat root hash
-      Goal: byte-exact to plain vectors; ERR_ROOT_MISMATCH on flipped byte.
-      Maker: gpt-5.6-sol · Checker: gpt-5.5
-- [ ] Go SDK: AES-256-GCM per-chunk (nonce=base XOR i, AAD=header‖i, verify-before-release)
-      Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip;
-      no plaintext emitted on failure (fail closed). CRYPTO-CRITICAL.
-      Maker: gpt-5.6-sol · Checker: gpt-5.5 (checker MUST differ from maker)
-- [ ] Go SDK: streaming Encoder/Decoder (io.Writer/io.Reader)
-      Goal: streaming output byte-identical to one-shot; memory bounded by chunk size.
-      Maker: gpt-5.6-terra · Checker: gpt-5.5
-- [ ] Go SDK: DoS caps on untrusted length fields (SECURITY.md §5)
-      Goal: oversized meta_len/clen/chunk_count rejected before allocation.
-      Maker: gpt-5.6-sol · Checker: gpt-5.5
-- [ ] Test vectors (Go canonical generator): plain + encrypted(fixed nonce) + edge + negatives
-      Goal: vectors.json + inputs/ + expected/ complete per TESTING.md §2; committed as
-      the shared contract.
-      Maker: gpt-5.6-sol · Checker: gpt-5.5
-- [ ] Node SDK: full implementation against vectors (BigInt for 64-bit fields)
+- [x] Go SDK: header, metadata, plain payload, and AES-GCM — checker-confirmed 2026-08-07
+- [x] Go SDK: streaming Encoder/Decoder (io.Writer/io.Reader) — checker-confirmed 2026-08-07
+- [x] Go SDK: DoS caps on untrusted length fields — checker-confirmed 2026-08-07
+- [x] Test vectors (Go canonical generator) — checker-confirmed 2026-08-07
+- [x] Node SDK: full implementation against vectors (BigInt for 64-bit fields)
       Goal: 100% vector pass byte-exact; chunk_count/total_size handled as BigInt.
-      Maker: gpt-5.6-terra · Checker: gpt-5.5
-- [ ] Cross-decode Go ↔ Node
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol — confirmed 2026-08-08
+- [x] Cross-decode Go ↔ Node
       Goal: each decodes the other's containers; round-trip identity holds.
-      Maker: gpt-5.6-terra · Checker: gpt-5.5
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol — confirmed 2026-08-08
 
 ### Phase 1 exit gate
 - All conformance vectors pass on Go and Node (byte-exact + negatives with exact ids).

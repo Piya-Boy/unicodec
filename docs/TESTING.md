@@ -79,6 +79,13 @@ Encrypted vectors additionally fix `key` and `baseNonce` so output is reproducib
 3. **Round-trip property** — random inputs/sizes: `decode(encode(x)) == x`.
 4. **Cross-decode** — decode containers produced by other SDKs (Go↔Node in Phase 1).
 
+Run the Phase 1 Go↔Node gate after building the Node SDK:
+
+```powershell
+npm run build --prefix sdk/node
+node scripts/cross-decode.mjs
+```
+
 ---
 
 ## 4. Determinism tests
