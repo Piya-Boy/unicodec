@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +11,75 @@ import (
 
 	ubc "github.com/ubc/vectors/sdk/go"
 )
+
+type cliVector struct {
+	ID          string `json:"id"`
+	Input       string `json:"input"`
+	Expected    string `json:"expected"`
+	ExpectError string `json:"expectError"`
+	Options     struct {
+		Key string `json:"key"`
+	} `json:"options"`
+}
+
+type cliVectorManifest struct {
+	CryptoKnownAnswers []struct {
+		Key string `json:"key"`
+	} `json:"cryptoKnownAnswers"`
+	Vectors []cliVector `json:"vectors"`
+}
+
+func loadCLIManifest(t *testing.T) cliVectorManifest {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "spec", "vectors", "vectors.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest cliVectorManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	return manifest
+}
+
+func loadCLIVectors(t *testing.T) []cliVector {
+	return loadCLIManifest(t).Vectors
+}
+
+func fixedVectorKey(t *testing.T) []byte {
+	t.Helper()
+	knownAnswers := loadCLIManifest(t).CryptoKnownAnswers
+	if len(knownAnswers) == 0 {
+		t.Fatal("vectors manifest has no crypto known-answer key")
+	}
+	return decodeVectorKey(t, knownAnswers[0].Key)
+}
+
+func vectorKey(t *testing.T, vector cliVector) []byte {
+	t.Helper()
+	if vector.Options.Key != "" {
+		return decodeVectorKey(t, vector.Options.Key)
+	}
+	return fixedVectorKey(t)
+}
+
+func decodeVectorKey(t *testing.T, value string) []byte {
+	t.Helper()
+	key, err := hex.DecodeString(value)
+	if err != nil || len(key) != 32 {
+		t.Fatalf("invalid vector key %q: %v", value, err)
+	}
+	return key
+}
+
+func vectorIsEncrypted(t *testing.T, path string) bool {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(data) > 5 && data[5]&1 != 0
+}
 
 func TestRootHelpAndVersion(t *testing.T) {
 	var stdout, stderr bytes.Buffer
@@ -77,10 +148,10 @@ func TestCommandOptionsAcceptGlobalFlags(t *testing.T) {
 
 func TestUnimplementedCommandDoesNotReportSuccess(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"decode", "-in", "input"}, &stdout, &stderr); code != 2 {
-		t.Fatalf("decode exit code = %d", code)
+	if code := run([]string{"verify", "-in", "input"}, &stdout, &stderr); code != 2 {
+		t.Fatalf("verify exit code = %d", code)
 	}
-	if stdout.Len() != 0 || stderr.String() != "ubc decode: not implemented\n" {
+	if stdout.Len() != 0 || stderr.String() != "ubc verify: not implemented\n" {
 		t.Fatalf("stdout = %q, stderr = %q", stdout.String(), stderr.String())
 	}
 }
@@ -304,5 +375,134 @@ func TestEncodeStdinCanPublishToItsSourcePath(t *testing.T) {
 	}
 	if !bytes.Equal(got, want) {
 		t.Fatal("redirected stdin output differs from SDK")
+	}
+}
+
+func TestDecodeSharedPositiveVectors(t *testing.T) {
+	for _, vector := range loadCLIVectors(t) {
+		if vector.ExpectError != "" {
+			continue
+		}
+		t.Run(vector.ID, func(t *testing.T) {
+			t.Setenv("UBC_KEY", "")
+			directory := t.TempDir()
+			output := filepath.Join(directory, "output.bin")
+			container := filepath.Join("..", "spec", "vectors", vector.Expected)
+			args := []string{
+				"decode",
+				"-in", container,
+				"-out", output,
+			}
+			if vectorIsEncrypted(t, container) {
+				keyPath := filepath.Join(directory, "key.bin")
+				if err := os.WriteFile(keyPath, vectorKey(t, vector), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				args = append(args, "-key-file", keyPath)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := run(args, &stdout, &stderr); code != 0 {
+				t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+			}
+			got, err := os.ReadFile(output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, err := os.ReadFile(filepath.Join("..", "spec", "vectors", vector.Input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, want) || stdout.Len() != 0 || stderr.Len() != 0 {
+				t.Fatalf("output differs from shared input; stdout = %q, stderr = %q", stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestDecodeNegativeVectorsFailClosed(t *testing.T) {
+	for _, vector := range loadCLIVectors(t) {
+		if vector.ExpectError == "" {
+			continue
+		}
+		t.Run(vector.ID, func(t *testing.T) {
+			t.Setenv("UBC_KEY", "")
+			directory := t.TempDir()
+			container := filepath.Join("..", "spec", "vectors", vector.Expected)
+			args := []string{
+				"decode",
+				"-in", container,
+				"-out", "-",
+			}
+			if vector.ExpectError != "ERR_MISSING_KEY" && vectorIsEncrypted(t, container) {
+				key := vectorKey(t, vector)
+				keyPath := filepath.Join(directory, "key.bin")
+				if err := os.WriteFile(keyPath, key, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				args = append(args, "-key-file", keyPath)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := run(args, &stdout, &stderr); code != 1 {
+				t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+			}
+			if stdout.Len() != 0 || stderr.String() != vector.ExpectError+"\n" {
+				t.Fatalf("stdout = %q, stderr = %q", stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestDecodeDoesNotOverwriteKeyFile(t *testing.T) {
+	keyPath := filepath.Join(t.TempDir(), "key.bin")
+	key := fixedVectorKey(t)
+	if err := os.WriteFile(keyPath, key, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{
+		"decode",
+		"-in", filepath.Join("..", "spec", "vectors", "expected", "encrypted-one-byte.ubc"),
+		"-key-file", keyPath,
+		"-out", keyPath,
+	}, &stdout, &stderr); code != 2 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	got, err := os.ReadFile(keyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, key) {
+		t.Fatal("decode modified the key file")
+	}
+}
+
+func TestDecodeLateFailurePreservesExistingFileOutput(t *testing.T) {
+	directory := t.TempDir()
+	output := filepath.Join(directory, "output.bin")
+	original := []byte("preserve this output")
+	if err := os.WriteFile(output, original, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{
+		"decode",
+		"-in", filepath.Join("..", "spec", "vectors", "expected", "negative-root-mismatch.ubc"),
+		"-out", output,
+	}, &stdout, &stderr); code != 1 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	got, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, original) || stdout.Len() != 0 || stderr.String() != "ERR_ROOT_MISMATCH\n" {
+		t.Fatalf("output = %q, stdout = %q, stderr = %q", got, stdout.String(), stderr.String())
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "output.bin" {
+		t.Fatalf("staged output was not cleaned up: %#v", entries)
 	}
 }

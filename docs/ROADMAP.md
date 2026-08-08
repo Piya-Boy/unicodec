@@ -25,7 +25,7 @@ value (avoid leaking keys in shell history / process list).
       encrypt when a key is provided. Goal: output byte-identical to the Go SDK for the
       same input+options; matches encrypted vectors when `-base-nonce` is fixed (test-only).
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] `ubc decode` — container → plaintext; require key iff encrypted; fail closed.
+- [x] `ubc decode` — container → plaintext; require key iff encrypted; fail closed. (checker-confirmed 2026-08-08)
       Goal: round-trips every positive vector; negative vectors exit 1 with the exact
       error id on stderr; no plaintext emitted on failure.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)

@@ -96,14 +96,24 @@ func runCommand(name string, args []string, stdin io.Reader, stdout, stderr io.W
 		return 2
 	}
 
-	if name != "encode" {
+	var commandErr error
+	switch name {
+	case "encode":
+		commandErr = runEncode(options, stdin, stdout)
+	case "decode":
+		commandErr = runDecode(options, stdin, stdout)
+	default:
 		_, _ = fmt.Fprintf(stderr, "ubc %s: not implemented\n", name)
 		return 2
 	}
-	if err := runEncode(options, stdin, stdout); err != nil {
-		_, _ = fmt.Fprintf(stderr, "ubc encode: %v\n", err)
+	if commandErr != nil {
+		if code := ubc.ErrorCodeOf(commandErr); code != "" {
+			_, _ = fmt.Fprintln(stderr, code)
+		} else {
+			_, _ = fmt.Fprintf(stderr, "ubc %s: %v\n", name, commandErr)
+		}
 		var usageErr *usageError
-		if errors.As(err, &usageErr) {
+		if errors.As(commandErr, &usageErr) {
 			return 2
 		}
 		return 1
@@ -187,7 +197,7 @@ func runEncode(options commandOptions, stdin io.Reader, stdout io.Writer) error 
 	}
 	defer func() { _ = closeInput() }()
 
-	if err := rejectSameInputOutput(options.inputPath, options.outputPath); err != nil {
+	if err := rejectOutputAliases(options.outputPath, options.inputPath, options.keyFile); err != nil {
 		return err
 	}
 	output, err := newStagedOutput(options.outputPath, stdout)
@@ -209,6 +219,37 @@ func runEncode(options commandOptions, stdin io.Reader, stdout io.Writer) error 
 		return err
 	}
 	if err := encoder.Close(); err != nil {
+		return err
+	}
+	return output.publish()
+}
+
+func runDecode(options commandOptions, stdin io.Reader, stdout io.Writer) error {
+	key, err := loadKey(options.keyFile)
+	if err != nil {
+		return err
+	}
+	input, closeInput, err := openInput(options.inputPath, stdin)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = closeInput() }()
+	if err := rejectOutputAliases(options.outputPath, options.inputPath, options.keyFile); err != nil {
+		return err
+	}
+	output, err := newStagedOutput(options.outputPath, stdout)
+	if err != nil {
+		return err
+	}
+	defer output.discard()
+	decoder, err := ubc.NewDecoder(input, ubc.DecodeOptions{Key: key})
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(output.file, decoder); err != nil {
+		return err
+	}
+	if err := closeStdinBeforeReplace(stdin, options.outputPath); err != nil {
 		return err
 	}
 	return output.publish()
@@ -254,14 +295,22 @@ func openInput(path string, stdin io.Reader) (io.Reader, func() error, error) {
 	return file, file.Close, nil
 }
 
-func rejectSameInputOutput(inputPath, outputPath string) error {
-	if inputPath == "-" || outputPath == "-" {
+func rejectOutputAliases(outputPath string, sourcePaths ...string) error {
+	if outputPath == "-" {
 		return nil
 	}
-	inputInfo, inputErr := os.Stat(inputPath)
 	outputInfo, outputErr := os.Stat(outputPath)
-	if inputErr == nil && outputErr == nil && os.SameFile(inputInfo, outputInfo) {
-		return newUsageError("-in and -out must refer to different files")
+	if outputErr != nil {
+		return nil
+	}
+	for _, sourcePath := range sourcePaths {
+		if sourcePath == "" || sourcePath == "-" {
+			continue
+		}
+		sourceInfo, sourceErr := os.Stat(sourcePath)
+		if sourceErr == nil && os.SameFile(sourceInfo, outputInfo) {
+			return newUsageError("-out must refer to a different file than input and key material")
+		}
 	}
 	return nil
 }
