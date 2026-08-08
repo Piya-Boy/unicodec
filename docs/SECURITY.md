@@ -10,9 +10,9 @@ choices. Error identifiers and byte layout are defined by SPEC.md.
 
 | Goal | Mechanism |
 |------|-----------|
-| Integrity / tamper detection | `root_hash` binds header + metadata + all chunk hashes |
+| Integrity / tamper detection | SHA-256 root for plain; key-authenticated HMAC-SHA-256 root for encrypted |
 | Confidentiality (optional) | AES-256-GCM per chunk |
-| Authenticity of encrypted data | GCM tag per chunk, AAD binds header + chunk index |
+| Authenticity of encrypted data | GCM tag per chunk and HMAC root; AAD binds header + metadata digest + chunk index |
 | Fail-closed decoding | Reject before releasing plaintext on any check failure |
 | Deterministic, auditable format | No hidden fields, no ambient state |
 
@@ -26,12 +26,13 @@ or well-vetted library.
 
 ### In scope (UBC defends)
 
-- **Tampering at rest / in transit.** Any byte flip in header, metadata, or payload is
-  detected: `root_hash` for all modes; GCM tag for encrypted payloads.
+- **Accidental corruption.** Any byte flip in header, metadata, or payload is detected by
+  the plain SHA-256 checksum. It is not protection from an active attacker, who can recompute it.
+- **Encrypted active tampering.** The HMAC root and GCM tags detect modification without the key.
 - **Chunk reordering / truncation.** AAD binds each chunk to its index and the header;
   the root binds `chunk_count`. Reordered or dropped chunks fail authentication or root.
-- **Header/metadata substitution.** Header and metadata are inside `root_hash` and (in
-  encrypted mode) inside every chunk's AAD, so they cannot be swapped silently.
+- **Header/metadata substitution.** Encrypted metadata is bound into every GCM AAD and the
+  HMAC root, so it cannot be substituted even if an attacker can recompute plain hashes.
 - **Downgrade via version/algo confusion.** Unknown `version`/`hash_algo`/`aead_algo`
   and any set reserved bit cause a hard fail (`ERR_UNSUPPORTED_*` / `ERR_RESERVED_BITS`).
 - **Partial-plaintext leakage on corruption.** Decrypt verifies each chunk's tag before
@@ -58,8 +59,8 @@ or well-vetted library.
 
 - In every target stdlib; zero external dependency; guarantees identical bytes across
   all SDKs (a hard requirement for the determinism goal).
-- `hash_algo` field reserves room for BLAKE3 etc. later, but v1 ships SHA-256 only so
-  no SDK depends on a third-party hash whose version could drift.
+- `hash_algo` selects the fixed v1 root mode: SHA-256 checksum for plain containers and
+  HMAC-SHA-256 authentication for encrypted containers; both use the standard library.
 
 ### 3.2 AEAD — AES-256-GCM
 
@@ -83,7 +84,7 @@ or well-vetted library.
 
 ### 3.4 AAD binding
 
-`AAD_i = header_bytes || le64(i)`. This authenticates the entire header and the chunk's
+`AAD_i = header_bytes || SHA-256(meta_region) || le64(i)`. This authenticates the entire header, metadata, and the chunk's
 position with every chunk, so an attacker cannot:
 - change algorithms/flags/sizes in the header (breaks all chunk tags),
 - reorder or splice chunks between containers (index / header mismatch).

@@ -1,0 +1,372 @@
+{
+  "version": 1,
+  "cryptoKnownAnswers": [
+    {
+      "id": "encrypted-root-key-fixed",
+      "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "baseNonce": "f0e0d0c0b0a0908070605040",
+      "rootKey": "52c04b400d73df15d8a0db6ba58919f46fe822fff200fb50d8dee097af3c688c"
+    }
+  ],
+  "vectors": [
+    {
+      "id": "plain-empty",
+      "description": "Plain input: empty.bin",
+      "input": "inputs/empty.bin",
+      "options": {
+        "chunkSize": 1048576
+      },
+      "expected": "expected/plain-empty.ubc",
+      "expectedSha256": "dbb48cf2e1bdc86b1cf810f284c4ea3cda00b9ece2a267066b4d11afb1270351",
+      "expectError": null
+    },
+    {
+      "id": "plain-one-byte",
+      "description": "Plain input: one-byte.bin",
+      "input": "inputs/one-byte.bin",
+      "options": {
+        "chunkSize": 1048576
+      },
+      "expected": "expected/plain-one-byte.ubc",
+      "expectedSha256": "4333ecc186bf6155697e936c24367dec13fc1312ef8a2177b30322f531c78055",
+      "expectError": null
+    },
+    {
+      "id": "plain-chunk-1m",
+      "description": "Plain input: chunk-1m.bin",
+      "input": "inputs/chunk-1m.bin",
+      "options": {
+        "chunkSize": 1048576
+      },
+      "expected": "expected/plain-chunk-1m.ubc",
+      "expectedSha256": "ab21f5bf2d7fa84a9cedeadbcd9a599668e2c64ac484f20fd39188ccfdda2fd9",
+      "expectError": null
+    },
+    {
+      "id": "plain-chunk-1m-plus-one",
+      "description": "Plain input: chunk-1m-plus-one.bin",
+      "input": "inputs/chunk-1m-plus-one.bin",
+      "options": {
+        "chunkSize": 1048576
+      },
+      "expected": "expected/plain-chunk-1m-plus-one.ubc",
+      "expectedSha256": "42a193d47424607d3165e1bf14dbd2e658c4a2705b0566fb768dee2533bf685e",
+      "expectError": null
+    },
+    {
+      "id": "plain-multi-3m",
+      "description": "Plain input: multi-3m.bin",
+      "input": "inputs/multi-3m.bin",
+      "options": {
+        "chunkSize": 1048576
+      },
+      "expected": "expected/plain-multi-3m.ubc",
+      "expectedSha256": "ea31a4b7fdb8539569a5ef03fcc2d14c1cf450e8f55fb454338fbbba31dc313f",
+      "expectError": null
+    },
+    {
+      "id": "plain-metadata",
+      "description": "Plain input with UTF-8 reserved and user metadata tags",
+      "input": "inputs/one-byte.bin",
+      "options": {
+        "chunkSize": 1048576,
+        "metadata": [
+          {
+            "tag": "0x0001",
+            "valueHex": "e0b8a3e0b8b2e0b8a2e0b887e0b8b2e0b8992d323032362e747874"
+          },
+          {
+            "tag": "0x0002",
+            "valueHex": "746578742f706c61696e"
+          },
+          {
+            "tag": "0x0003",
+            "valueHex": "00a8da769b010000"
+          },
+          {
+            "tag": "0x1000",
+            "valueHex": "00ff7f"
+          }
+        ]
+      },
+      "expected": "expected/plain-metadata.ubc",
+      "expectedSha256": "aad5a38a63dddf898c0b072d161567ad203dc002463d77075f1e2ba08aacdf1c",
+      "expectError": null
+    },
+    {
+      "id": "encrypted-empty",
+      "description": "AES-256-GCM fixed-nonce input: empty.bin",
+      "input": "inputs/empty.bin",
+      "options": {
+        "chunkSize": 1048576,
+        "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "baseNonce": "f0e0d0c0b0a0908070605040"
+      },
+      "expected": "expected/encrypted-empty.ubc",
+      "expectedSha256": "9607f9a265bc71c211c9ddb1b2c81f1454c774bfb2e3ee02edd29af5f22bf1cd",
+      "expectError": null
+    },
+    {
+      "id": "encrypted-one-byte",
+      "description": "AES-256-GCM fixed-nonce input: one-byte.bin",
+      "input": "inputs/one-byte.bin",
+      "options": {
+        "chunkSize": 1048576,
+        "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "baseNonce": "f0e0d0c0b0a0908070605040"
+      },
+      "expected": "expected/encrypted-one-byte.ubc",
+      "expectedSha256": "c63f25b746d1ecf3913684184ef332a747590708b5e6b3e34cf4123977bdfa0f",
+      "expectError": null
+    },
+    {
+      "id": "encrypted-chunk-1m",
+      "description": "AES-256-GCM fixed-nonce input: chunk-1m.bin",
+      "input": "inputs/chunk-1m.bin",
+      "options": {
+        "chunkSize": 1048576,
+        "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "baseNonce": "f0e0d0c0b0a0908070605040"
+      },
+      "expected": "expected/encrypted-chunk-1m.ubc",
+      "expectedSha256": "434872cd61b1addedaa5f5427447867b29025fd03110d91c2ab9670342ad137f",
+      "expectError": null
+    },
+    {
+      "id": "encrypted-chunk-1m-plus-one",
+      "description": "AES-256-GCM fixed-nonce input: chunk-1m-plus-one.bin",
+      "input": "inputs/chunk-1m-plus-one.bin",
+      "options": {
+        "chunkSize": 1048576,
+        "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "baseNonce": "f0e0d0c0b0a0908070605040"
+      },
+      "expected": "expected/encrypted-chunk-1m-plus-one.ubc",
+      "expectedSha256": "5bc146348e6f791bf5dc5d50b0af808871e048dcaf1590c222172274ab91d994",
+      "expectError": null
+    },
+    {
+      "id": "encrypted-multi-3m",
+      "description": "AES-256-GCM fixed-nonce input: multi-3m.bin",
+      "input": "inputs/multi-3m.bin",
+      "options": {
+        "chunkSize": 1048576,
+        "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "baseNonce": "f0e0d0c0b0a0908070605040"
+      },
+      "expected": "expected/encrypted-multi-3m.ubc",
+      "expectedSha256": "02929967b656c1974ead8b8c0c8e7bcb5b1120a38c2d81c3cff89e82b4fbe3ea",
+      "expectError": null
+    },
+    {
+      "id": "encrypted-metadata",
+      "description": "AES-256-GCM fixed-nonce input with authenticated metadata",
+      "input": "inputs/one-byte.bin",
+      "options": {
+        "chunkSize": 1048576,
+        "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "baseNonce": "f0e0d0c0b0a0908070605040",
+        "metadata": [
+          {
+            "tag": "0x0001",
+            "valueHex": "e0b8a3e0b8b2e0b8a2e0b887e0b8b2e0b8992d323032362e747874"
+          },
+          {
+            "tag": "0x0002",
+            "valueHex": "746578742f706c61696e"
+          },
+          {
+            "tag": "0x0003",
+            "valueHex": "00a8da769b010000"
+          },
+          {
+            "tag": "0x1000",
+            "valueHex": "00ff7f"
+          }
+        ]
+      },
+      "expected": "expected/encrypted-metadata.ubc",
+      "expectedSha256": "148e7e05eff6045780043c15cb3fe093521d8cfe914e4e9372d674f576ee1eac",
+      "expectError": null
+    },
+    {
+      "id": "negative-bad-magic",
+      "description": "Header magic is invalid",
+      "expected": "expected/negative-bad-magic.ubc",
+      "expectedSha256": "2cd6d354461b96daae39de19063f62110c62b885c8a429ce0a30b536274d7d16",
+      "expectError": "ERR_BAD_MAGIC"
+    },
+    {
+      "id": "negative-version-two",
+      "description": "Header version is unsupported",
+      "expected": "expected/negative-version-two.ubc",
+      "expectedSha256": "86bee652107cc080e06304516330474d143bd4ff7a610d83faef63e6364ecafd",
+      "expectError": "ERR_UNSUPPORTED_VER"
+    },
+    {
+      "id": "negative-hash-algo",
+      "description": "Header hash algorithm is unsupported",
+      "expected": "expected/negative-hash-algo.ubc",
+      "expectedSha256": "3bbe942feab38be02ca80e4db5795ad51eb78ef041b427a6e5fbcb86b6def48e",
+      "expectError": "ERR_UNSUPPORTED_ALGO"
+    },
+    {
+      "id": "negative-aead-algo",
+      "description": "Header AEAD algorithm is unsupported",
+      "expected": "expected/negative-aead-algo.ubc",
+      "expectedSha256": "c8f32fa83d6bd51a5d99d58276e808d8218bbbcbee8ac915b28db35f1c0c58f4",
+      "expectError": "ERR_UNSUPPORTED_ALGO"
+    },
+    {
+      "id": "negative-reserved-flag",
+      "description": "Reserved header flag bit is set",
+      "expected": "expected/negative-reserved-flag.ubc",
+      "expectedSha256": "1c72fcf4821f3df2363aaefc0d59a6fcffea28f4d7f24868fe365622baa87199",
+      "expectError": "ERR_RESERVED_BITS"
+    },
+    {
+      "id": "negative-inconsistent-encryption",
+      "description": "Encrypted flag conflicts with no AEAD",
+      "expected": "expected/negative-inconsistent-encryption.ubc",
+      "expectedSha256": "14be5dee31642d44fff8e73b6445cdd51aab36084fe2237631ff5a5751a1d492",
+      "expectError": "ERR_RESERVED_BITS"
+    },
+    {
+      "id": "negative-truncated",
+      "description": "Footer magic is missing",
+      "expected": "expected/negative-truncated.ubc",
+      "expectedSha256": "58620fc17e62abad81e23d0ab98893ea679bbbc525223318a58ea6f43e9ed6ec",
+      "expectError": "ERR_TRUNCATED"
+    },
+    {
+      "id": "negative-root-mismatch",
+      "description": "Plain payload byte is flipped",
+      "expected": "expected/negative-root-mismatch.ubc",
+      "expectedSha256": "ea573e80252fa75e10648765e22495ed5d2954090508363ba5becc2e2403c7c7",
+      "expectError": "ERR_ROOT_MISMATCH"
+    },
+    {
+      "id": "negative-chunk-auth",
+      "description": "Encrypted ciphertext byte is flipped",
+      "expected": "expected/negative-chunk-auth.ubc",
+      "expectedSha256": "ec2221cd1ed1452f144ac9851a54099006a22ab72488d20cf344a8f61f3baf4a",
+      "expectError": "ERR_CHUNK_AUTH"
+    },
+    {
+      "id": "negative-missing-key",
+      "description": "Encrypted container decoded without a key",
+      "expected": "expected/negative-missing-key.ubc",
+      "expectedSha256": "c63f25b746d1ecf3913684184ef332a747590708b5e6b3e34cf4123977bdfa0f",
+      "expectError": "ERR_MISSING_KEY"
+    },
+    {
+      "id": "negative-meta-out-of-order",
+      "description": "Metadata tags are out of ascending order",
+      "expected": "expected/negative-meta-out-of-order.ubc",
+      "expectedSha256": "44bbf79dac981f5a3a5bcbeaf57b1b7e32b7886185fd0613c2b288867c878d56",
+      "expectError": "ERR_META_MALFORMED"
+    },
+    {
+      "id": "negative-meta-duplicate",
+      "description": "Metadata has a duplicate tag",
+      "expected": "expected/negative-meta-duplicate.ubc",
+      "expectedSha256": "bab7848eb54e0acaf17d9c8df8547cde1a4e5c3894ece8c0802db3206c8039c2",
+      "expectError": "ERR_META_MALFORMED"
+    },
+    {
+      "id": "negative-meta-overrun",
+      "description": "Metadata TLV length overruns metadata region",
+      "expected": "expected/negative-meta-overrun.ubc",
+      "expectedSha256": "644399775c75b5d9fc8aece12ca48a583344fb7eea01b7ab50e97406082e4612",
+      "expectError": "ERR_META_MALFORMED"
+    },
+    {
+      "id": "negative-oversized-clen",
+      "description": "Chunk length exceeds bytes remaining",
+      "expected": "expected/negative-oversized-clen.ubc",
+      "expectedSha256": "e598830ffebc9242142b122c7da6edc978d85d2776dd23ad741170cbe733f1c4",
+      "expectError": "ERR_TRUNCATED"
+    },
+    {
+      "id": "negative-zero-chunk-size",
+      "description": "Header chunk size is zero",
+      "expected": "expected/negative-zero-chunk-size.ubc",
+      "expectedSha256": "d0eb5c40e584ac1b02b83746daa974667011d4ec419d0a14163a11805bfe3837",
+      "expectError": "ERR_RESERVED_BITS"
+    },
+    {
+      "id": "negative-empty-metadata",
+      "description": "Metadata flag carries an empty metadata block",
+      "expected": "expected/negative-empty-metadata.ubc",
+      "expectedSha256": "e39813948d738e727a8d67b6fe3a0b01dfa5f6a23aedaf8095eef54f14a2f9fc",
+      "expectError": "ERR_META_MALFORMED"
+    },
+    {
+      "id": "negative-trailing-data",
+      "description": "Container has bytes after its footer",
+      "expected": "expected/negative-trailing-data.ubc",
+      "expectedSha256": "e87176feb695f8ff27e13ffec4280747ac5b49be59f1f4fab216fd79d677ab4e",
+      "expectError": "ERR_TRAILING_DATA"
+    },
+    {
+      "id": "negative-encrypted-zero-chunk-size",
+      "description": "Encrypted header chunk size is zero",
+      "expected": "expected/negative-encrypted-zero-chunk-size.ubc",
+      "expectedSha256": "689053a84fd18df57213974c39dd58ddbc6552929f3c54105074bb04ab501cbf",
+      "expectError": "ERR_RESERVED_BITS"
+    },
+    {
+      "id": "negative-encrypted-oversized-chunk-size",
+      "description": "Encrypted header chunk size cannot fit its tag",
+      "expected": "expected/negative-encrypted-oversized-chunk-size.ubc",
+      "expectedSha256": "e37aba00c5f690d4f4c76002f0af2d591ef8fef13abb00ef1206a49efbe779c1",
+      "expectError": "ERR_RESERVED_BITS"
+    },
+    {
+      "id": "negative-encrypted-short-clen",
+      "description": "Encrypted chunk body is shorter than its GCM tag",
+      "expected": "expected/negative-encrypted-short-clen.ubc",
+      "expectedSha256": "928014b6099280004eeb5b87a72f0f6cfa1bdc3629481af4e193067ed696b435",
+      "expectError": "ERR_CHUNK_AUTH"
+    },
+    {
+      "id": "negative-encrypted-metadata-tamper",
+      "description": "Valid encrypted metadata change invalidates chunk AAD",
+      "expected": "expected/negative-encrypted-metadata-tamper.ubc",
+      "expectedSha256": "a643d3d81ee51c86961c9f249d759efbee0115b4e7623e6fe0d88908edd2217e",
+      "expectError": "ERR_CHUNK_AUTH"
+    },
+    {
+      "id": "negative-encrypted-reserved-metadata",
+      "description": "Malformed encrypted metadata precedes missing-key failure",
+      "expected": "expected/negative-encrypted-reserved-metadata.ubc",
+      "expectedSha256": "412aa5001bfbcad249b081babba90080195af4b6b52f7ea540f25d93fe5552b7",
+      "expectError": "ERR_META_MALFORMED"
+    },
+    {
+      "id": "negative-encrypted-cap-missing-key",
+      "description": "Missing key precedes encrypted payload caps",
+      "expected": "expected/negative-encrypted-cap-missing-key.ubc",
+      "expectedSha256": "ee87a9055fb8e902c62696b8a17abe76da3c32342d81f830e8b6348dd17249eb",
+      "expectError": "ERR_MISSING_KEY"
+    },
+    {
+      "id": "negative-reserved-metadata",
+      "description": "Reserved metadata value is invalid UTF-8",
+      "expected": "expected/negative-reserved-metadata.ubc",
+      "expectedSha256": "10ea92d5dec1dc0eb5a0ad5dfaebbb0718fe9a62debaad046e5a800a949d6861",
+      "expectError": "ERR_META_MALFORMED"
+    },
+    {
+      "id": "negative-encrypted-empty-wrong-key",
+      "description": "Encrypted empty container rejects a wrong key",
+      "options": {
+        "chunkSize": 0,
+        "key": "ff0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+      },
+      "expected": "expected/negative-encrypted-empty-wrong-key.ubc",
+      "expectedSha256": "9607f9a265bc71c211c9ddb1b2c81f1454c774bfb2e3ee02edd29af5f22bf1cd",
+      "expectError": "ERR_ROOT_MISMATCH"
+    }
+  ]
+}

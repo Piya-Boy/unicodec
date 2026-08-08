@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "outDir": "dist/cjs",
+    "rootDir": ".",
+    "types": ["node"],
+    "strict": true,
+    "declaration": false,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}
