@@ -29,7 +29,7 @@ value (avoid leaking keys in shell history / process list).
       Goal: round-trips every positive vector; negative vectors exit 1 with the exact
       error id on stderr; no plaintext emitted on failure.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
-- [ ] `ubc verify` — integrity/auth only, never writes plaintext. Goal: prints ok/fail +
+- [x] `ubc verify` — integrity/auth only, never writes plaintext. (checker-confirmed 2026-08-09) Goal: prints ok/fail +
       error id; exit 0/1; matches Go `Verify` on all vectors.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
 - [ ] `ubc inspect` — print header + metadata (human text + `-json`), no payload read,

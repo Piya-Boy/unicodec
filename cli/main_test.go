@@ -148,10 +148,10 @@ func TestCommandOptionsAcceptGlobalFlags(t *testing.T) {
 
 func TestUnimplementedCommandDoesNotReportSuccess(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"verify", "-in", "input"}, &stdout, &stderr); code != 2 {
-		t.Fatalf("verify exit code = %d", code)
+	if code := run([]string{"inspect", "-in", "input"}, &stdout, &stderr); code != 2 {
+		t.Fatalf("inspect exit code = %d", code)
 	}
-	if stdout.Len() != 0 || stderr.String() != "ubc verify: not implemented\n" {
+	if stdout.Len() != 0 || stderr.String() != "ubc inspect: not implemented\n" {
 		t.Fatalf("stdout = %q, stderr = %q", stdout.String(), stderr.String())
 	}
 }
@@ -504,5 +504,41 @@ func TestDecodeLateFailurePreservesExistingFileOutput(t *testing.T) {
 	}
 	if len(entries) != 1 || entries[0].Name() != "output.bin" {
 		t.Fatalf("staged output was not cleaned up: %#v", entries)
+	}
+}
+
+func TestVerifySharedVectors(t *testing.T) {
+	for _, vector := range loadCLIVectors(t) {
+		t.Run(vector.ID, func(t *testing.T) {
+			t.Setenv("UBC_KEY", "")
+			directory := t.TempDir()
+			container := filepath.Join("..", "spec", "vectors", vector.Expected)
+			args := []string{"verify", "-in", container}
+			if vector.ExpectError != "ERR_MISSING_KEY" && vectorIsEncrypted(t, container) {
+				keyPath := filepath.Join(directory, "key.bin")
+				if err := os.WriteFile(keyPath, vectorKey(t, vector), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				args = append(args, "-key-file", keyPath)
+			}
+			var stdout, stderr bytes.Buffer
+			code := run(args, &stdout, &stderr)
+			if vector.ExpectError == "" {
+				if code != 0 || stdout.String() != "ok\n" || stderr.Len() != 0 {
+					t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+				}
+				return
+			}
+			if code != 1 || stdout.String() != "fail\n" || stderr.String() != vector.ExpectError+"\n" {
+				t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestVerifyRejectsPlaintextOutputPath(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"verify", "-out", "output.bin"}, &stdout, &stderr); code != 2 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 }

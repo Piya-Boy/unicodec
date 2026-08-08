@@ -102,6 +102,19 @@ func runCommand(name string, args []string, stdin io.Reader, stdout, stderr io.W
 		commandErr = runEncode(options, stdin, stdout)
 	case "decode":
 		commandErr = runDecode(options, stdin, stdout)
+	case "verify":
+		report, err := runVerify(options, stdin)
+		if err != nil {
+			commandErr = err
+			break
+		}
+		if report.OK {
+			_, _ = fmt.Fprintln(stdout, "ok")
+			return 0
+		}
+		_, _ = fmt.Fprintln(stdout, "fail")
+		_, _ = fmt.Fprintln(stderr, report.Error)
+		return 1
 	default:
 		_, _ = fmt.Fprintf(stderr, "ubc %s: not implemented\n", name)
 		return 2
@@ -253,6 +266,22 @@ func runDecode(options commandOptions, stdin io.Reader, stdout io.Writer) error 
 		return err
 	}
 	return output.publish()
+}
+
+func runVerify(options commandOptions, stdin io.Reader) (ubc.VerifyReport, error) {
+	if options.outputPath != "-" {
+		return ubc.VerifyReport{}, newUsageError("verify does not write plaintext; omit -out")
+	}
+	key, err := loadKey(options.keyFile)
+	if err != nil {
+		return ubc.VerifyReport{}, err
+	}
+	input, closeInput, err := openInput(options.inputPath, stdin)
+	if err != nil {
+		return ubc.VerifyReport{}, err
+	}
+	defer func() { _ = closeInput() }()
+	return ubc.Verify(input, ubc.DecodeOptions{Key: key}), nil
 }
 
 func loadKey(keyFile string) ([]byte, error) {
