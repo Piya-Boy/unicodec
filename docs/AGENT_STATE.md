@@ -45,6 +45,7 @@ resumes across runs without re-deriving context. See [AGENTS.md](../AGENTS.md) f
     the supplied key. Resolve through an RFC/spec+vector change before freezing.
   - Clarify the canonical accept/reject grammar for an empty metadata block, trailing bytes,
     and when streaming plaintext may be released relative to final root verification.
+  - Draft proposal: `rfcs/0001-authenticated-encrypted-roots.md` — awaiting human acceptance.
 
 ## Next (ordered)
 - [ ] Freeze format v1 — final human review of SPEC.md; no byte-layout changes after this
