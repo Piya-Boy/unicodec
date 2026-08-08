@@ -1,0 +1,23 @@
+rfcs/0001-authenticated-encrypted-roots.md
+  s_979a62fa9b30eb::t_fa765813336964 43-45,48-49,54-58,60,66-68,74-75,79-82,94-96,99-102,113,115-127,129-134,146-150,158-167,171-173,192-199
+  s_979a62fa9b30eb::t_d55945b267f427 1-42,46-47,50-53,61-65,69-73,76-78,83-93,97-98,103-112,114,128,135-145,151-157,168-170,174-191
+  s_979a62fa9b30eb::t_5a4a7c28995471 59
+docs/AGENT_STATE.md
+  s_979a62fa9b30eb::t_d55945b267f427 48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f2352e807b4e395da5e5ec854f9b31f9a45f8745",
+  "prompts": {},
+  "sessions": {
+    "s_979a62fa9b30eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe127-a91a-7133-8e49-dd5b42adf542",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
