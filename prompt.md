@@ -6,17 +6,24 @@ files to read and to work from the roadmap.
 ## Run
 
 ```powershell
-codex exec -m gpt-5.6-terra --dangerously-bypass-approvals-and-sandbox (Get-Content prompt.md -Raw)
+$env:UBC_LOOP_BYPASS = "1" # only in an isolated VM/container
+python scripts/loop.py --model gpt-5.6-terra --checker-model gpt-5.6-sol
 ```
 
-Run from the repo root. `--dangerously-bypass-approvals-and-sandbox` lets it run tests and
-edit files without prompting. Work happens on a feature branch — never commit to main.
+Run from the repo root. The driver runs a maker and a fresh, different-model checker for every
+task; the checker alone may record, commit, and push. `UBC_LOOP_BYPASS=1` lets those agents run
+tests and edit files without prompting; use it only in an isolated environment. Work happens on
+a feature branch — never commit to main.
 
 ---
 
 ## PROMPT
 
 You are building UBC (Universal Binary Container) autonomously.
+
+The loop driver appends your role for this invocation. Its maker/checker instructions override
+any conflicting step below: the maker never self-approves or commits, and the fresh checker is
+the only role permitted to record a completion and commit it.
 
 FIRST, read these files in full before doing anything:
 - AGENTS.md — the build loop, model split, stop-and-ask rules (authority after the spec)

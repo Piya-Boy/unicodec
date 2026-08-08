@@ -17,26 +17,26 @@ never fully buffered. Exit codes: `0` ok, `1` verification/format failure (print
 error id to stderr), `2` usage error. Keys come from a file or env var, never a CLI flag
 value (avoid leaking keys in shell history / process list).
 
-- [ ] CLI scaffold: `cli/` package, arg parsing, `ubc <verb> [flags]`, `--help`, version.
+- [x] CLI scaffold: `cli/` package, arg parsing, `ubc <verb> [flags]`, `--help`, version. (checker-confirmed 2026-08-08)
       Global flags: `-in <path|->`, `-out <path|->`, `-key-file <path>` / `UBC_KEY` env,
       `-chunk-size`. Goal: `ubc --help` and each subcommand's help render; usage error = exit 2.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] `ubc encode` — stream stdin/file → container; optional metadata (`-name`, `-mime`);
+- [x] `ubc encode` — stream stdin/file → container; optional metadata (`-name`, `-mime`); (checker-confirmed 2026-08-08)
       encrypt when a key is provided. Goal: output byte-identical to the Go SDK for the
       same input+options; matches encrypted vectors when `-base-nonce` is fixed (test-only).
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] `ubc decode` — container → plaintext; require key iff encrypted; fail closed.
+- [x] `ubc decode` — container → plaintext; require key iff encrypted; fail closed. (checker-confirmed 2026-08-08)
       Goal: round-trips every positive vector; negative vectors exit 1 with the exact
       error id on stderr; no plaintext emitted on failure.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
-- [ ] `ubc verify` — integrity/auth only, never writes plaintext. Goal: prints ok/fail +
+- [x] `ubc verify` — integrity/auth only, never writes plaintext. (checker-confirmed 2026-08-09) Goal: prints ok/fail +
       error id; exit 0/1; matches Go `Verify` on all vectors.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] `ubc inspect` — print header + metadata (human text + `-json`), no payload read,
+- [x] `ubc inspect` — print header + metadata (human text + `-json`), no payload read, (checker-confirmed 2026-08-09)
       no key. Goal: fields match Go `Inspect`/ContainerInfo across vectors.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] CLI conformance tests: drive the binary over the shared vectors (encode/decode/
-      verify/inspect), asserting bytes, exit codes, and stderr error ids. No bespoke
+- [x] CLI conformance tests: drive the binary over the shared vectors (encode/decode/
+      verify/inspect), asserting bytes, exit codes, and stderr error ids. (checker-confirmed 2026-08-09) No bespoke
       expected values — reuse spec/vectors.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
 
@@ -69,8 +69,8 @@ public APIs. This is the proof that the format is language-agnostic.
 
 ## Phase 2 — CLI
 
-- [ ] `ubc encode | decode | verify | inspect` (built on the Go SDK, single binary)
-- [ ] CLI conformance against vectors
+- [x] `ubc encode | decode | verify | inspect` (built on the Go SDK, single binary) (checker-confirmed 2026-08-09)
+- [x] CLI conformance against vectors (checker-confirmed 2026-08-09)
 
 Exit criteria: CLI usable end-to-end; verified against vectors.
 
