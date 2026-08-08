@@ -25,6 +25,18 @@ from .payload import (
     encode_plain,
 )
 from .crypto import decode_encrypted, encode_encrypted
+from .streaming import (
+    ContainerFlags,
+    ContainerInfo,
+    Decoder,
+    Encoder,
+    EncodeOptions,
+    VerifyReport,
+    inspect,
+    new_decoder,
+    new_encoder,
+    verify,
+)
 
 __all__ = [
     "AEAD_AES_256_GCM",
@@ -34,7 +46,12 @@ __all__ = [
     "DEFAULT_MAX_CHUNK_LEN",
     "DEFAULT_MAX_META_BYTES",
     "DEFAULT_MAX_TOTAL_SIZE",
+    "ContainerFlags",
+    "ContainerInfo",
+    "Decoder",
     "DecodeOptions",
+    "Encoder",
+    "EncodeOptions",
     "ErrorCode",
     "FLAG_ENCRYPTED",
     "FLAG_HAS_METADATA",
@@ -45,11 +62,16 @@ __all__ = [
     "MetadataEntry",
     "UbcError",
     "VERSION",
+    "VerifyReport",
     "encode_metadata",
     "encode_plain",
     "decode_plain",
     "decode_encrypted",
     "encode_encrypted",
+    "inspect",
+    "new_decoder",
+    "new_encoder",
     "parse_header",
     "parse_metadata",
+    "verify",
 ]

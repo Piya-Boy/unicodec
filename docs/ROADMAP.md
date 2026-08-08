@@ -35,8 +35,11 @@ inspect. Same stable error identifiers (SPEC.md §5).
       byte-exact, exact negative error ids, 15 tests pass, security review clean.)
       CRYPTO-CRITICAL — checker MUST differ from maker.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-terra
-- [ ] Python streaming encoder/decoder + verify + inspect; DoS caps on untrusted lengths.
+- [x] Python streaming encoder/decoder + verify + inspect; DoS caps on untrusted lengths.
       Goal: streaming output identical to one-shot; fail-closed; caps enforced pre-alloc.
+      (checker-confirmed 2026-08-09; positive vectors byte-exact, negative vectors return
+      exact error ids, 22 tests pass, DoS caps and small-read regression verified,
+      security review clean.)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
 - [ ] Python conformance + cross-decode: run all shared vectors (positive byte-exact,
       negative with exact error ids); decode Go/Node containers and vice versa.
