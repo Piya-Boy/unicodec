@@ -1,0 +1,19 @@
+docs/ROADMAP.md
+  s_63bf915f166a33::t_beaffd42b1c9ab 26,28-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "250b574b6cd3cbdc0cb52dd6f415b9a7c0f3ed40",
+  "prompts": {},
+  "sessions": {
+    "s_63bf915f166a33": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e850fc98-4c11-44f8-9411-176650c931bd",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
