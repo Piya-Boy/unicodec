@@ -1,0 +1,21 @@
+sdk/go/decode.go
+  s_a540ee2e2cdd88::t_386cd315df8f3f 1-20
+sdk/go/decode_test.go
+  s_a540ee2e2cdd88::t_386cd315df8f3f 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "cdfcf51d4df7d913b2fc9e68e6e7023f4757345b",
+  "prompts": {},
+  "sessions": {
+    "s_a540ee2e2cdd88": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1c0-b04c-7fe1-89bf-fa621b78af1b",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
