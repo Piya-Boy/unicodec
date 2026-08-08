@@ -23,9 +23,11 @@ inspect. Same stable error identifiers (SPEC.md §5).
       stable error id, header + TLV encode/parse. Goal: header/TLV round-trip; matches the
       header/metadata bytes in the shared vectors. (checker-confirmed 2026-08-09)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] Python plain path: chunking + SHA-256 flat root; one-shot encode/decode.
+- [x] Python plain path: chunking + SHA-256 flat root; one-shot encode/decode.
       Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
-      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
+      (human-verified byte-exact vs all plain vectors incl. metadata; 11 tests /
+      36 subtests pass; DoS caps enforced. 2026-08-09)
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
 - [ ] Python encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
       sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
       Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
