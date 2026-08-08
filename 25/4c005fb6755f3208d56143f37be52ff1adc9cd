@@ -1,0 +1,46 @@
+docs/AGENT_STATE.md
+  s_bd6b13f4f1dcf2::t_437cb98a22e66a 29
+  s_979a62fa9b30eb::t_91a7e5b9e2d8b8 36,56,58
+  s_bd6b13f4f1dcf2::t_5c492a8db30641 32
+  s_bd6b13f4f1dcf2::t_57134711f810ba 33
+  s_07ff0591d9f52c::t_813b497240a08c 34-35,52-55
+  s_bd6b13f4f1dcf2::t_31ff003a22ca2a 30
+  s_bd6b13f4f1dcf2::t_cc72caded40923 31
+  s_979a62fa9b30eb::t_4a9aa39cfc4ea4 10,37-38,41,59,61
+docs/TESTING.md
+  s_979a62fa9b30eb::t_4a9aa39cfc4ea4 82-88
+docs/ROADMAP.md
+  s_979a62fa9b30eb::t_4a9aa39cfc4ea4 19-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "254c005fb6755f3208d56143f37be52ff1adc9cd",
+  "prompts": {},
+  "sessions": {
+    "s_07ff0591d9f52c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fdc31-9c5d-7a91-9312-7033039cd31e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_979a62fa9b30eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe127-a91a-7133-8e49-dd5b42adf542",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_bd6b13f4f1dcf2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fdbe2-34c3-7e01-8e55-a93572b2a76a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
