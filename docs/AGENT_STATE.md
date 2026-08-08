@@ -46,6 +46,9 @@ resumes across runs without re-deriving context. See [AGENTS.md](../AGENTS.md) f
   - Clarify the canonical accept/reject grammar for an empty metadata block, trailing bytes,
     and when streaming plaintext may be released relative to final root verification.
   - Draft proposal: `rfcs/0001-authenticated-encrypted-roots.md` — awaiting human acceptance.
+  - Release audit (2026-08-08): origin has only the initial `main` branch and no tags;
+    `@ubc/node` is not published to npm; `github.com/ubc/vectors` is not publicly resolvable.
+    Human confirmation of no out-of-band artifacts or downstream consumers is still required.
 
 ## Next (ordered)
 - [ ] Freeze format v1 — final human review of SPEC.md; no byte-layout changes after this
