@@ -28,10 +28,12 @@ inspect. Same stable error identifiers (SPEC.md §5).
       (human-verified byte-exact vs all plain vectors incl. metadata; 11 tests /
       36 subtests pass; DoS caps enforced. 2026-08-09)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] Python encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+- [x] Python encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
       sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
       Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
-      plaintext on failure. CRYPTO-CRITICAL — checker MUST differ from maker.
+      plaintext on failure. (checker-confirmed 2026-08-09; all encrypted shared vectors
+      byte-exact, exact negative error ids, 15 tests pass, security review clean.)
+      CRYPTO-CRITICAL — checker MUST differ from maker.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-terra
 - [ ] Python streaming encoder/decoder + verify + inspect; DoS caps on untrusted lengths.
       Goal: streaming output identical to one-shot; fail-closed; caps enforced pre-alloc.

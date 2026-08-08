@@ -29,8 +29,11 @@ class DecodeOptions:
     max_chunk_len: int = DEFAULT_MAX_CHUNK_LEN
     max_chunk_count: int = DEFAULT_MAX_CHUNK_COUNT
     max_total_size: int = DEFAULT_MAX_TOTAL_SIZE
+    key: bytes | None = None
 
     def __post_init__(self) -> None:
+        if self.key is not None and not isinstance(self.key, bytes):
+            raise ValueError("key must be bytes when provided")
         for value in (
             self.max_meta_bytes,
             self.max_chunk_len,

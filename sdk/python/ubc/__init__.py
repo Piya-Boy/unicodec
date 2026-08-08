@@ -24,6 +24,7 @@ from .payload import (
     decode_plain,
     encode_plain,
 )
+from .crypto import decode_encrypted, encode_encrypted
 
 __all__ = [
     "AEAD_AES_256_GCM",
@@ -47,6 +48,8 @@ __all__ = [
     "encode_metadata",
     "encode_plain",
     "decode_plain",
+    "decode_encrypted",
+    "encode_encrypted",
     "parse_header",
     "parse_metadata",
 ]
