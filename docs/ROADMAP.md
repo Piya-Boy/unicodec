@@ -20,10 +20,10 @@ gap (SECURITY.md §6). No format change; no RFC needed.
 - [x] Go SDK: `Inspect(source) ContainerInfo` — header + metadata only, no payload read,
       no plaintext. Match docs/API.md §2.5 and Node `inspect()`.
       (checker-confirmed 2026-08-08; Go test, vet, race, vectorgen check)
-- [ ] Go SDK: `DecodeBytes(container, opts) ([]byte, []MetadataEntry, error)` one-shot —
+- [x] Go SDK: `DecodeBytes(container, opts) ([]byte, []MetadataEntry, error)` one-shot —
       drain NewDecoder to EOF; reuse Decoder (no duplicated crypto); byte-identical
       round-trip; parity with Node `decodeBytes()`.
-      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+      (checker-confirmed 2026-08-08; Go test, vet, race, vectorgen check)
 - [ ] Sync docs/API.md and docs/SDK.md to the REAL Go surface (Encode*/Verify/Inspect/
       DecodeBytes/NewEncoder/NewDecoder). No claimed-but-absent APIs.
       Maker: gpt-5.6-luna · Checker: gpt-5.6-sol
