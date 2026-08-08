@@ -17,9 +17,9 @@ gap (SECURITY.md §6). No format change; no RFC needed.
 
 - [x] Go SDK: `Verify(source, opts) VerifyReport` — drains decoder without releasing
       plaintext; reports first stable error id. Added sdk/go/verify.go (human-reviewed).
-- [ ] Go SDK: `Inspect(source) ContainerInfo` — header + metadata only, no payload read,
+- [x] Go SDK: `Inspect(source) ContainerInfo` — header + metadata only, no payload read,
       no plaintext. Match docs/API.md §2.5 and Node `inspect()`.
-      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+      (checker-confirmed 2026-08-08; Go test, vet, race, vectorgen check)
 - [ ] Go SDK: `DecodeBytes(container, opts) ([]byte, []MetadataEntry, error)` one-shot —
       drain NewDecoder to EOF; reuse Decoder (no duplicated crypto); byte-identical
       round-trip; parity with Node `decodeBytes()`.
