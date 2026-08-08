@@ -1,0 +1,42 @@
+cli/main_test.go
+  s_fb51cbc651e104::t_d95244f914f57e 53-54,90-95
+  s_fb51cbc651e104::t_b1b60bc82b4c56 50,122,136,142-156
+  s_fb51cbc651e104::t_693a501206b118 131-135,137-141,157-159
+  s_fb51cbc651e104::t_124791f042a933 191-224,226-233
+  s_fb51cbc651e104::t_1e3b58f3a505cf 225
+  s_fb51cbc651e104::t_1b421090d3e18a 5-7,10-11,46-49,51-52,96-121,123-129,160-183,186,234-261
+  s_fb51cbc651e104::t_61761e00138111 130,190
+docs/ROADMAP.md
+  s_fb51cbc651e104::t_5792944019fe50 24
+cli/encode.go
+  s_fb51cbc651e104::t_4fa56c52e8755e 39-43,75-77,182-190
+  s_fb51cbc651e104::t_b1b60bc82b4c56 27-29
+  s_fb51cbc651e104::t_28a239fe0eb346 1-26,33-38,44-60,64,66-74,83,85,87,91-181,248
+  s_fb51cbc651e104::t_2c61624239c462 30-32,61-63,65,78-82,84,86,88-90,191-247
+sdk/go/encoder.go
+  s_fb51cbc651e104::t_2c61624239c462 163-165
+  s_fb51cbc651e104::t_dc9c42c986d618 71,151-162
+cli/main.go
+  s_fb51cbc651e104::t_e454316bbac617 82,114
+  s_fb51cbc651e104::t_b1b60bc82b4c56 24,113,163-164
+  s_fb51cbc651e104::t_426002a9c33cde 21-23,32-35,60,74,83,94-96,109-112,156-162,165-169
+  s_fb51cbc651e104::t_f41ae46fc5cbe2 17-20
+sdk/go/encoder_abort_test.go
+  s_fb51cbc651e104::t_1b421090d3e18a 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "39a9f1aaa7463a03c8e2f8ddec3f1491418b2b06",
+  "prompts": {},
+  "sessions": {
+    "s_fb51cbc651e104": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe1e3-3fdb-7240-9c6d-011c4ad954d5",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
