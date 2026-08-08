@@ -27,8 +27,20 @@ type commandOptions struct {
 	chunkSize  uint64
 	name       string
 	mime       string
+	metadata   metadataValues
 	baseNonce  string
 	json       bool
+}
+
+type metadataValues []string
+
+func (values *metadataValues) String() string {
+	return strings.Join(*values, ",")
+}
+
+func (values *metadataValues) Set(value string) error {
+	*values = append(*values, value)
+	return nil
 }
 
 func main() {
@@ -149,6 +161,7 @@ func parseCommandOptions(name string, args []string) (commandOptions, bool, erro
 	if name == "encode" {
 		flags.StringVar(&options.name, "name", "", "filename metadata")
 		flags.StringVar(&options.mime, "mime", "", "MIME type metadata")
+		flags.Var(&options.metadata, "metadata", "metadata entry as tag:hex; repeatable")
 		flags.StringVar(&options.baseNonce, "base-nonce", "", "fixed nonce for conformance testing only")
 	}
 	if name == "inspect" {
@@ -186,12 +199,19 @@ func runEncode(options commandOptions, stdin io.Reader, stdout io.Writer) error 
 		return newUsageError("-chunk-size must not exceed %d when encrypting", uint32(math.MaxUint32-16))
 	}
 
-	entries := make([]ubc.MetadataEntry, 0, 2)
+	entries := make([]ubc.MetadataEntry, 0, 2+len(options.metadata))
 	if options.name != "" {
 		entries = append(entries, ubc.MetadataEntry{Tag: 0x0001, Value: []byte(options.name)})
 	}
 	if options.mime != "" {
 		entries = append(entries, ubc.MetadataEntry{Tag: 0x0002, Value: []byte(options.mime)})
+	}
+	for _, rawEntry := range options.metadata {
+		entry, err := parseMetadataEntry(rawEntry)
+		if err != nil {
+			return err
+		}
+		entries = append(entries, entry)
 	}
 	if _, err := ubc.EncodeMetadata(entries); err != nil {
 		return &usageError{err: err}
@@ -242,6 +262,26 @@ func runEncode(options commandOptions, stdin io.Reader, stdout io.Writer) error 
 		return err
 	}
 	return output.publish()
+}
+
+func parseMetadataEntry(value string) (ubc.MetadataEntry, error) {
+	tagValue, valueHex, found := strings.Cut(value, ":")
+	if !found {
+		return ubc.MetadataEntry{}, newUsageError("-metadata must use tag:hex")
+	}
+	tagText := strings.TrimSpace(tagValue)
+	if len(tagText) >= 2 && tagText[0] == '0' && (tagText[1] == 'x' || tagText[1] == 'X') {
+		tagText = tagText[2:]
+	}
+	tag, err := strconv.ParseUint(tagText, 16, 16)
+	if err != nil {
+		return ubc.MetadataEntry{}, newUsageError("-metadata tag must be a uint16")
+	}
+	decoded, err := hex.DecodeString(strings.TrimSpace(valueHex))
+	if err != nil {
+		return ubc.MetadataEntry{}, newUsageError("-metadata value must be hexadecimal")
+	}
+	return ubc.MetadataEntry{Tag: uint16(tag), Value: decoded}, nil
 }
 
 func runDecode(options commandOptions, stdin io.Reader, stdout io.Writer) error {
@@ -506,6 +546,8 @@ Flags:
         filename metadata
   -mime <value>
         MIME type metadata
+  -metadata <tag:hex>
+        metadata entry; may be repeated
   -base-nonce <hex>
         fixed 12-byte nonce for conformance testing only
 `)

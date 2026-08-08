@@ -35,8 +35,8 @@ value (avoid leaking keys in shell history / process list).
 - [x] `ubc inspect` — print header + metadata (human text + `-json`), no payload read, (checker-confirmed 2026-08-09)
       no key. Goal: fields match Go `Inspect`/ContainerInfo across vectors.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] CLI conformance tests: drive the binary over the shared vectors (encode/decode/
-      verify/inspect), asserting bytes, exit codes, and stderr error ids. No bespoke
+- [x] CLI conformance tests: drive the binary over the shared vectors (encode/decode/
+      verify/inspect), asserting bytes, exit codes, and stderr error ids. (checker-confirmed 2026-08-09) No bespoke
       expected values — reuse spec/vectors.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
 
@@ -69,8 +69,8 @@ public APIs. This is the proof that the format is language-agnostic.
 
 ## Phase 2 — CLI
 
-- [ ] `ubc encode | decode | verify | inspect` (built on the Go SDK, single binary)
-- [ ] CLI conformance against vectors
+- [x] `ubc encode | decode | verify | inspect` (built on the Go SDK, single binary) (checker-confirmed 2026-08-09)
+- [x] CLI conformance against vectors (checker-confirmed 2026-08-09)
 
 Exit criteria: CLI usable end-to-end; verified against vectors.
 

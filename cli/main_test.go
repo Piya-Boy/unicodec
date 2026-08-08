@@ -21,8 +21,16 @@ type cliVector struct {
 	Expected    string `json:"expected"`
 	ExpectError string `json:"expectError"`
 	Options     struct {
-		Key string `json:"key"`
+		ChunkSize uint32              `json:"chunkSize"`
+		Key       string              `json:"key"`
+		BaseNonce string              `json:"baseNonce"`
+		Metadata  []cliMetadataVector `json:"metadata"`
 	} `json:"options"`
+}
+
+type cliMetadataVector struct {
+	Tag      string `json:"tag"`
+	ValueHex string `json:"valueHex"`
 }
 
 type cliVectorManifest struct {
@@ -143,12 +151,15 @@ func TestUsageErrorsExitTwo(t *testing.T) {
 }
 
 func TestCommandOptionsAcceptGlobalFlags(t *testing.T) {
-	options, help, err := parseCommandOptions("encode", []string{"-in", "input", "-out", "output", "-key-file", "key.bin", "-chunk-size", "4096"})
+	options, help, err := parseCommandOptions("encode", []string{"-in", "input", "-out", "output", "-key-file", "key.bin", "-chunk-size", "4096", "-metadata", "0x1000:00ff"})
 	if err != nil || help {
 		t.Fatalf("parseCommandOptions() = %#v, %v, %v", options, help, err)
 	}
 	if options.inputPath != "input" || options.outputPath != "output" || options.keyFile != "key.bin" || options.chunkSize != 4096 {
 		t.Fatalf("options = %#v", options)
+	}
+	if len(options.metadata) != 1 || options.metadata[0] != "0x1000:00ff" {
+		t.Fatalf("metadata = %#v", options.metadata)
 	}
 }
 
@@ -256,6 +267,9 @@ func TestEncodeInvalidConfigurationIsUsageError(t *testing.T) {
 	tests := [][]string{
 		{"encode", "-base-nonce", "f0e0d0c0b0a0908070605040"},
 		{"encode", "-base-nonce", "nope", "-key-file", "key.hex"},
+		{"encode", "-metadata", "bad"},
+		{"encode", "-metadata", "0x10000:00"},
+		{"encode", "-metadata", "0x1000:not-hex"},
 	}
 	for _, args := range tests {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
@@ -272,6 +286,21 @@ func TestEncodeInvalidConfigurationIsUsageError(t *testing.T) {
 				t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 			}
 		})
+	}
+}
+
+func TestParseMetadataEntryUsesHexadecimalTags(t *testing.T) {
+	for _, value := range []string{"1000:00", "0x1000:00", "0X1000:00"} {
+		entry, err := parseMetadataEntry(value)
+		if err != nil {
+			t.Fatalf("parseMetadataEntry(%q): %v", value, err)
+		}
+		if entry.Tag != 0x1000 || !bytes.Equal(entry.Value, []byte{0}) {
+			t.Fatalf("parseMetadataEntry(%q) = %#v", value, entry)
+		}
+	}
+	if _, err := parseMetadataEntry("0x0X1000:00"); err == nil {
+		t.Fatal("parseMetadataEntry accepted a double hexadecimal prefix")
 	}
 }
 
