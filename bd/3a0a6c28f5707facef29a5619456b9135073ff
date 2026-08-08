@@ -1,0 +1,23 @@
+tools/crossdecode/main.go
+  s_979a62fa9b30eb::t_34ebf2eea2480f 1-18,25-351
+  s_979a62fa9b30eb::t_a22c6b01887e91 19-24
+scripts/cross-decode.mjs
+  s_979a62fa9b30eb::t_56a475704ee30f 12,98,101,103-104
+  s_979a62fa9b30eb::t_34ebf2eea2480f 1-11,13-97,99-100,102,105-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "bd3a0a6c28f5707facef29a5619456b9135073ff",
+  "prompts": {},
+  "sessions": {
+    "s_979a62fa9b30eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe127-a91a-7133-8e49-dd5b42adf542",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
