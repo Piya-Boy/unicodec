@@ -11,46 +11,41 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-**Phase 3 — Python SDK.** Port the frozen format to `sdk/python/`. The Go SDK and the
-shared vectors in spec/vectors are the contract — the port must match byte-for-byte and
-cross-decode with Go/Node. Stdlib crypto only (`hashlib`, `hmac`, and AES-256-GCM from the
-`cryptography` package — the one accepted dependency; no custom crypto). No format change.
-Handle 64-bit fields as real Python ints (no float coercion). Keep the public API
-equivalent to Go/Node: encode/decode (one-shot), streaming encoder/decoder, verify,
-inspect. Same stable error identifiers (SPEC.md §5).
+**Phase 3 — Rust SDK.** Port the frozen format to `sdk/rust/` (a Cargo crate `ubc`). The
+Go SDK, Python SDK, and shared vectors in spec/vectors are the contract — the port must
+match byte-for-byte and cross-decode with Go/Node/Python. Crypto from well-vetted crates:
+`sha2`, `hmac`, `hkdf`, and `aes-gcm` (RustCrypto) — no custom crypto. No format change.
+Use `u64` for chunk_count/total_size, little-endian throughout. Idiomatic Rust: return
+`Result<_, UbcError>` with an error enum mapping every stable error id; no `unwrap` on
+untrusted input; `#![forbid(unsafe_code)]`. Keep the public API equivalent to the other
+SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, inspect.
 
-- [x] Python scaffold: `sdk/python/` package layout, pyproject, error types mapping every
-      stable error id, header + TLV encode/parse. Goal: header/TLV round-trip; matches the
-      header/metadata bytes in the shared vectors. (checker-confirmed 2026-08-09)
+- [ ] Rust scaffold: `sdk/rust/` cargo crate, `UbcError` enum mapping every stable error id
+      (SPEC.md §5), header + TLV encode/parse. Goal: header/TLV round-trip; matches the
+      header/metadata bytes in the shared vectors. `#![forbid(unsafe_code)]`.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [x] Python plain path: chunking + SHA-256 flat root; one-shot encode/decode.
+- [ ] Rust plain path: chunking + SHA-256 flat root; one-shot encode/decode.
       Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
-      (human-verified byte-exact vs all plain vectors incl. metadata; 11 tests /
-      36 subtests pass; DoS caps enforced. 2026-08-09)
-      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [x] Python encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
+- [ ] Rust encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
       sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
       Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
-      plaintext on failure. (checker-confirmed 2026-08-09; all encrypted shared vectors
-      byte-exact, exact negative error ids, 15 tests pass, security review clean.)
-      CRYPTO-CRITICAL — checker MUST differ from maker.
+      plaintext on failure. CRYPTO-CRITICAL — checker MUST differ from maker.
       Maker: gpt-5.6-sol · Checker: gpt-5.6-terra
-- [x] Python streaming encoder/decoder + verify + inspect; DoS caps on untrusted lengths.
-      Goal: streaming output identical to one-shot; fail-closed; caps enforced pre-alloc.
-      (checker-confirmed 2026-08-09; positive vectors byte-exact, negative vectors return
-      exact error ids, 22 tests pass, DoS caps and small-read regression verified,
-      security review clean.)
+- [ ] Rust streaming encoder/decoder (Read/Write) + verify + inspect; DoS caps on
+      untrusted lengths. Goal: streaming output identical to one-shot; fail-closed; caps
+      enforced before allocation. Constant-time compare for the encrypted root.
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [x] Python conformance + cross-decode: run all shared vectors (positive byte-exact,
-      negative with exact error ids); decode Go/Node containers and vice versa.
-      Goal: 100% vector pass; cross-decode Go↔Node↔Python green.
-      (checker-confirmed 2026-08-09; Python 22 tests, Node 55 tests, Go test/vet/race,
-      vector generator, and Go↔Node↔Python cross-decode passed; security review clean.)
-      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+- [ ] Rust conformance + cross-decode: run all shared vectors (positive byte-exact,
+      negative with exact error ids); decode Go/Node/Python containers and vice versa.
+      Goal: 100% vector pass; cross-decode Go↔Node↔Python↔Rust green. `cargo test`,
+      `cargo clippy -- -D warnings`, `cargo fmt --check` clean.
+      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
 
-Phase 3 (Python) exit gate: sdk/python passes 100% of shared vectors byte-exact, rejects
-negatives with exact error ids, cross-decodes with Go and Node, stdlib/cryptography only,
-public API equivalent to Go/Node. Then stop for human review before the next SDK (Rust).
+Phase 3 (Rust) exit gate: sdk/rust passes 100% of shared vectors byte-exact, rejects
+negatives with exact error ids, cross-decodes with Go/Node/Python, RustCrypto crates only,
+no unsafe, clippy/fmt clean, public API equivalent to the other SDKs. Then stop for human
+review before the next SDK (Java).
 
 ---
 
