@@ -40,10 +40,34 @@ SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, 
       configurable caps verified; 14 Rust tests, clippy -D warnings, fmt --check, Go
       test/vet/race, and security review pass.)
       Maker: gpt-5.6-sol · Checker: gpt-5.6-terra
-- [ ] Rust streaming encoder/decoder (Read/Write) + verify + inspect; DoS caps on
+- [x] Rust streaming encoder/decoder (Read/Write) + verify + inspect; DoS caps on
       untrusted lengths. Goal: streaming output identical to one-shot; fail-closed; caps
       enforced before allocation. Constant-time compare for the encrypted root.
-      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
+      (checker 2026-08-10: TEST gate passes — cargo test --all-targets (20), fmt, all-target
+      clippy, and Go test/vet/race. SECURITY gate failed: Encoder::finish allocates a full
+      chunk_size buffer even for empty/small input, so a valid large chunk_size can OOM/abort.
+      Bound allocation by actual remaining input or enforce an encoder limit, add regression
+      coverage, then rerun fresh CHECK/SECURITY. No commit/push. Maker 2026-08-10 bounded
+      the encoder buffer to min(total_size, chunk_size), added u32::MAX chunk-size regression
+      coverage, and reran TEST: cargo test --all-targets (21), fmt, all-target clippy, and Go
+      test/vet/race pass. Fresh checker 2026-08-10 confirmed TEST remains green but
+      CHECK/SECURITY failed: the final encrypted chunk is authenticated before a missing
+      footer is classified, violating ERR_TRUNCATED-before-ERR_CHUNK_AUTH precedence; and a
+      successful Encoder::finish retains its plaintext TempSpool until drop. Preflight the
+      final footer before authenticating the last chunk, remove the encoder spool immediately
+      after successful finalization, add regression coverage for both, then rerun fresh
+      TEST/CHECK/SECURITY. No commit/push. Maker 2026-08-10 preflighted and retained the
+      complete final footer before last-chunk authentication, and purges/removes the plaintext
+      spool immediately after successful finish; regressions cover ERR_TRUNCATED precedence
+      over a corrupted final tag and post-finish spool removal. Gates green: cargo test
+      --all-targets (23), cargo clippy --all-targets -- -D warnings, cargo fmt --check,
+      canonical Go vector check + go test ./..., and Python tests (22); Rust byte-exact
+      round-trip and Go/Python shared-vector cross-decode remain green. Human gate 2026-08-10:
+      Claude reran cargo test --all-targets (23), clippy -D warnings, fmt --check — all clean;
+      verified footer-preflight precedence, post-finish spool purge, byte-exact streaming
+      output vs shared vectors, and fail-closed decode. lib.rs re-exports the streaming API;
+      crypto.rs only widened internals to pub(crate) — no format or crypto change.)
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol · Human gate: Claude
 - [ ] Rust conformance + cross-decode: run all shared vectors (positive byte-exact,
       negative with exact error ids); decode Go/Node/Python containers and vice versa.
       Goal: 100% vector pass; cross-decode Go↔Node↔Python↔Rust green. `cargo test`,

@@ -12,9 +12,9 @@ use crate::{
     parse_metadata_with_limit,
 };
 
-const FOOTER_MAGIC: [u8; 4] = *b"UBCE";
-const FOOTER_SIZE: usize = 36;
-const GCM_TAG_SIZE: usize = 16;
+pub(crate) const FOOTER_MAGIC: [u8; 4] = *b"UBCE";
+pub(crate) const FOOTER_SIZE: usize = 36;
+pub(crate) const GCM_TAG_SIZE: usize = 16;
 const ROOT_INFO: &[u8] = b"UBC1 root authentication";
 
 /// Default upper bound for attacker-controlled encrypted chunk bodies during decoding.
@@ -52,7 +52,7 @@ impl Default for DecodeOptions<'static> {
     }
 }
 
-type HmacSha256 = Hmac<Sha256>;
+pub(crate) type HmacSha256 = Hmac<Sha256>;
 
 /// Encodes with a freshly generated base nonce. Deterministic tests should use
 /// [`encode_encrypted_with_fixed_nonce`] instead.
@@ -228,11 +228,11 @@ pub fn decode_encrypted_with_options(
     Ok((plaintext, metadata))
 }
 
-fn cipher(key: &[u8]) -> Result<Aes256Gcm, UbcError> {
+pub(crate) fn cipher(key: &[u8]) -> Result<Aes256Gcm, UbcError> {
     Aes256Gcm::new_from_slice(key).map_err(|_| UbcError::new(ErrorCode::MissingKey))
 }
 
-fn root_mac(key: &[u8], base_nonce: &[u8; 12]) -> Result<HmacSha256, UbcError> {
+pub(crate) fn root_mac(key: &[u8], base_nonce: &[u8; 12]) -> Result<HmacSha256, UbcError> {
     let mut root_key = [0_u8; 32];
     Hkdf::<Sha256>::new(Some(base_nonce), key)
         .expand(ROOT_INFO, &mut root_key)
@@ -241,7 +241,7 @@ fn root_mac(key: &[u8], base_nonce: &[u8; 12]) -> Result<HmacSha256, UbcError> {
         .map_err(|_| UbcError::new(ErrorCode::RootMismatch))
 }
 
-fn chunk_nonce(base_nonce: [u8; 12], index: u64) -> Nonce<U12> {
+pub(crate) fn chunk_nonce(base_nonce: [u8; 12], index: u64) -> Nonce<U12> {
     let mut nonce = base_nonce;
     for (byte, index_byte) in nonce.iter_mut().zip(index.to_le_bytes().iter()) {
         *byte ^= index_byte;
@@ -249,7 +249,7 @@ fn chunk_nonce(base_nonce: [u8; 12], index: u64) -> Nonce<U12> {
     *Nonce::<U12>::from_slice(&nonce)
 }
 
-fn chunk_aad(header: &[u8], metadata_digest: &[u8], index: u64) -> Vec<u8> {
+pub(crate) fn chunk_aad(header: &[u8], metadata_digest: &[u8], index: u64) -> Vec<u8> {
     let mut aad = Vec::with_capacity(header.len() + metadata_digest.len() + 8);
     aad.extend_from_slice(header);
     aad.extend_from_slice(metadata_digest);

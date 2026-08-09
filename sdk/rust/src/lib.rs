@@ -5,6 +5,7 @@ mod error;
 mod header;
 mod metadata;
 mod payload;
+mod streaming;
 
 pub use crypto::{
     DEFAULT_MAX_CHUNK_COUNT, DEFAULT_MAX_CHUNK_LEN, DEFAULT_MAX_TOTAL_SIZE, DecodeOptions,
@@ -21,3 +22,7 @@ pub use metadata::{
     parse_metadata_with_limit,
 };
 pub use payload::{DEFAULT_CHUNK_SIZE, decode_plain, encode_plain};
+pub use streaming::{
+    ContainerFlags, ContainerInfo, Decoder, EncodeOptions, Encoder, VerifyReport, inspect,
+    inspect_with_limit, new_decoder, new_encoder, verify,
+};
