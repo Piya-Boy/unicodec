@@ -31,10 +31,14 @@ SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, 
       (human-verified byte-exact vs all plain vectors; 9 tests pass; flipped→ROOT_MISMATCH;
       clippy -D warnings and fmt --check clean. 2026-08-10)
       Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
-- [ ] Rust encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+- [x] Rust encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
       sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
       Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
       plaintext on failure. CRYPTO-CRITICAL — checker MUST differ from maker.
+      (checker-confirmed 2026-08-10: all fixed-nonce encrypted vectors byte-exact; encrypted
+      negatives return stable error ids; fail-closed decode, missing-key precedence, and
+      configurable caps verified; 14 Rust tests, clippy -D warnings, fmt --check, Go
+      test/vet/race, and security review pass.)
       Maker: gpt-5.6-sol · Checker: gpt-5.6-terra
 - [ ] Rust streaming encoder/decoder (Read/Write) + verify + inspect; DoS caps on
       untrusted lengths. Goal: streaming output identical to one-shot; fail-closed; caps
