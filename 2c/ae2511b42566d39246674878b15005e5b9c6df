@@ -1,0 +1,49 @@
+sdk/rust/Cargo.toml
+  s_4b720e3e70025a::t_a893c42f684863 13-15
+sdk/rust/src/crypto.rs
+  s_4b720e3e70025a::t_c96350517c4f0f 3,102,126,189,240-241,244,249
+  s_b1caa0098b9812::t_331e00608820ad 11-12,20-54,138-145,151-152,160,163-166,168,177-181
+  s_4b720e3e70025a::t_6bf47edae9e84f 10,94-95,203-205,220-222
+  s_4b720e3e70025a::t_a893c42f684863 1-2,4-9,13-19,55-93,96-101,103-125,127-137,146-150,153-159,161-162,167,169-176,182-188,190-202,206-219,223-239,242-243,245-248,250-278
+docs/ROADMAP.md
+  s_4be5d798a79096::t_648bf06aacde05 34,38-41
+sdk/rust/src/lib.rs
+  s_b1caa0098b9812::t_331e00608820ad 9-13
+  s_4b720e3e70025a::t_a893c42f684863 3
+sdk/rust/tests/encrypted_vectors.rs
+  s_4b720e3e70025a::t_6bf47edae9e84f 10-11,27-42,49-78,92-121,132-136,138-162
+  s_4b720e3e70025a::t_a893c42f684863 1-2,8-9,12-26,43-48,79-91,122-131,137,163-167,229
+  s_b1caa0098b9812::t_331e00608820ad 3-7,168-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "2cae2511b42566d39246674878b15005e5b9c6df",
+  "prompts": {},
+  "sessions": {
+    "s_4b720e3e70025a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe78a-931d-76a2-b9ad-c7ee89033ef4",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_4be5d798a79096": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe79b-4fc1-7151-948c-3bd94100d704",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_b1caa0098b9812": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe798-22d5-70d2-acf0-e5140a02e433",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
