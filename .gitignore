@@ -36,3 +36,7 @@ Thumbs.db
 # Python
 __pycache__/
 *.py[cod]
+
+# Rust
+/sdk/rust/target/
+/sdk/rust/Cargo.lock

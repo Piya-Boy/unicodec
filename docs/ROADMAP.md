@@ -20,9 +20,12 @@ Use `u64` for chunk_count/total_size, little-endian throughout. Idiomatic Rust: 
 untrusted input; `#![forbid(unsafe_code)]`. Keep the public API equivalent to the other
 SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, inspect.
 
-- [ ] Rust scaffold: `sdk/rust/` cargo crate, `UbcError` enum mapping every stable error id
+- [x] Rust scaffold: `sdk/rust/` cargo crate, `UbcError` enum mapping every stable error id
       (SPEC.md §5), header + TLV encode/parse. Goal: header/TLV round-trip; matches the
       header/metadata bytes in the shared vectors. `#![forbid(unsafe_code)]`.
+      (toolchain installed; cargo build + 6 tests pass, header/metadata vectors byte-exact,
+      negative vectors use stable error ids. human-verified 2026-08-09)
+      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
 - [ ] Rust plain path: chunking + SHA-256 flat root; one-shot encode/decode.
       Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
