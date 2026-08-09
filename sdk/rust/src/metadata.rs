@@ -45,8 +45,8 @@ where
         body.extend_from_slice(&entry.value);
     }
 
-    let body_length = u32::try_from(body.len())
-        .map_err(|_| UbcError::new(ErrorCode::MetadataMalformed))?;
+    let body_length =
+        u32::try_from(body.len()).map_err(|_| UbcError::new(ErrorCode::MetadataMalformed))?;
     let mut encoded = Vec::with_capacity(4 + body.len());
     encoded.extend_from_slice(&body_length.to_le_bytes());
     encoded.extend_from_slice(&body);
@@ -70,8 +70,8 @@ pub fn parse_metadata_with_limit(
     if body_length == 0 {
         return Err(UbcError::new(ErrorCode::MetadataMalformed));
     }
-    let body_length = usize::try_from(body_length)
-        .map_err(|_| UbcError::new(ErrorCode::MetadataMalformed))?;
+    let body_length =
+        usize::try_from(body_length).map_err(|_| UbcError::new(ErrorCode::MetadataMalformed))?;
     if body_length > max_metadata_bytes {
         return Err(UbcError::new(ErrorCode::MetadataMalformed));
     }

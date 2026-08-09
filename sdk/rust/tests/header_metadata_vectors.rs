@@ -1,8 +1,8 @@
 use std::{fs, path::PathBuf};
 
 use ubc::{
-    encode_metadata, parse_header, parse_metadata, parse_metadata_with_limit,
-    ErrorCode, MetadataEntry, DEFAULT_MAX_METADATA_BYTES, HEADER_SIZE,
+    DEFAULT_MAX_METADATA_BYTES, ErrorCode, HEADER_SIZE, MetadataEntry, encode_metadata,
+    parse_header, parse_metadata, parse_metadata_with_limit,
 };
 
 fn vector_root() -> PathBuf {
@@ -23,15 +23,12 @@ fn all_positive_vector_headers_round_trip_byte_exactly() {
             .and_then(|value| value.to_str())
             .expect("UTF-8 name");
         if name.starts_with("negative-")
-            || path
-                .extension()
-                .is_none_or(|extension| extension != "ubc")
+            || path.extension().is_none_or(|extension| extension != "ubc")
         {
             continue;
         }
         let container = fs::read(&path).expect("vector must be readable");
-        let header =
-            parse_header(&container).unwrap_or_else(|error| panic!("{name}: {error}"));
+        let header = parse_header(&container).unwrap_or_else(|error| panic!("{name}: {error}"));
         assert_eq!(
             header.to_bytes().expect("valid parsed header"),
             container[..HEADER_SIZE]
@@ -61,12 +58,25 @@ fn header_negative_vectors_use_stable_error_codes() {
         ("negative-hash-algo.ubc", ErrorCode::UnsupportedAlgorithm),
         ("negative-aead-algo.ubc", ErrorCode::UnsupportedAlgorithm),
         ("negative-reserved-flag.ubc", ErrorCode::ReservedBits),
-        ("negative-inconsistent-encryption.ubc", ErrorCode::ReservedBits),
+        (
+            "negative-inconsistent-encryption.ubc",
+            ErrorCode::ReservedBits,
+        ),
         ("negative-zero-chunk-size.ubc", ErrorCode::ReservedBits),
-        ("negative-encrypted-zero-chunk-size.ubc", ErrorCode::ReservedBits),
-        ("negative-encrypted-oversized-chunk-size.ubc", ErrorCode::ReservedBits),
+        (
+            "negative-encrypted-zero-chunk-size.ubc",
+            ErrorCode::ReservedBits,
+        ),
+        (
+            "negative-encrypted-oversized-chunk-size.ubc",
+            ErrorCode::ReservedBits,
+        ),
     ] {
-        assert_eq!(parse_header(&vector(name)).expect_err(name).code, expected, "{name}");
+        assert_eq!(
+            parse_header(&vector(name)).expect_err(name).code,
+            expected,
+            "{name}"
+        );
     }
 }
 
@@ -81,9 +91,9 @@ fn metadata_negative_vectors_use_stable_error_codes() {
         "negative-reserved-metadata.ubc",
     ] {
         assert_eq!(
-        parse_metadata(&vector(name)[HEADER_SIZE..])
-            .expect_err(name)
-            .code,
+            parse_metadata(&vector(name)[HEADER_SIZE..])
+                .expect_err(name)
+                .code,
             ErrorCode::MetadataMalformed,
             "{name}"
         );

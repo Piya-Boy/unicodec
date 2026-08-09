@@ -26,9 +26,10 @@ SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, 
       (toolchain installed; cargo build + 6 tests pass, header/metadata vectors byte-exact,
       negative vectors use stable error ids. human-verified 2026-08-09)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-      Maker: gpt-5.6-terra · Checker: gpt-5.6-sol
-- [ ] Rust plain path: chunking + SHA-256 flat root; one-shot encode/decode.
+- [x] Rust plain path: chunking + SHA-256 flat root; one-shot encode/decode.
       Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
+      (human-verified byte-exact vs all plain vectors; 9 tests pass; flipped→ROOT_MISMATCH;
+      clippy -D warnings and fmt --check clean. 2026-08-10)
       Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
 - [ ] Rust encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
       sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
