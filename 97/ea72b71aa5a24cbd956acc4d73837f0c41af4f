@@ -1,0 +1,42 @@
+sdk/rust/src/metadata.rs
+  s_40059d3597f3fa::t_5ed47c5e385124 48-49,73-74
+sdk/rust/Cargo.toml
+  s_40059d3597f3fa::t_bb1ca9a0bd163f 13
+sdk/rust/src/lib.rs
+  s_40059d3597f3fa::t_bb1ca9a0bd163f 6
+  s_40059d3597f3fa::t_5ed47c5e385124 10-11,14-15,17
+sdk/rust/src/payload.rs
+  s_40059d3597f3fa::t_5ed47c5e385124 4-5,23-27,32-33,51-55,99-101
+  s_40059d3597f3fa::t_bb1ca9a0bd163f 1-3,6-22,28-31,34-50,56-98,102-144
+sdk/rust/tests/plain_vectors.rs
+  s_40059d3597f3fa::t_5ed47c5e385124 3,15-30,38-62,76-100
+  s_40059d3597f3fa::t_bb1ca9a0bd163f 1-2,4-14,31-37,63-75,101-113
+docs/ROADMAP.md
+  s_63bf915f166a33::t_dc12e042c868e4 29,31-32
+sdk/rust/tests/header_metadata_vectors.rs
+  s_40059d3597f3fa::t_5ed47c5e385124 4-5,26,31,61-64,66-73,75-79,94-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "97ea72b71aa5a24cbd956acc4d73837f0c41af4f",
+  "prompts": {},
+  "sessions": {
+    "s_40059d3597f3fa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe75f-bd7f-7b60-b876-60f41f6ab0f8",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_63bf915f166a33": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e850fc98-4c11-44f8-9411-176650c931bd",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
