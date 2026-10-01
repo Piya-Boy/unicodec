@@ -1,0 +1,42 @@
+scripts/cross-decode-python.py
+  s_71b5d6711856d1::t_cb28867d24b3bf 45
+scripts/cross-decode.mjs
+  s_71b5d6711856d1::t_71c7adae269c6c 160,167,181-182,189
+  s_71b5d6711856d1::t_e26b262a9e3c4e 144-146
+  s_71b5d6711856d1::t_038e9da2160041 44-47,54-55
+  s_71b5d6711856d1::t_2bb12beeaaf177 48-53
+  s_71b5d6711856d1::t_7aad5b98d5864e 196,203
+tools/crossdecode/main.go
+  s_71b5d6711856d1::t_5d93952b3991ce 87
+  s_71b5d6711856d1::t_7f1cc54fefba5f 61
+  s_71b5d6711856d1::t_55deeeb7744645 217-219
+  s_71b5d6711856d1::t_5efbc78e8ab589 169
+  s_71b5d6711856d1::t_08f24cf032fd6d 50,56
+sdk/dart/bin/cross_decode.dart
+  s_71b5d6711856d1::t_9f69dbb0635ce3 1-182
+sdk/dart/pubspec.yaml
+  s_71b5d6711856d1::t_6d4430091e5cd9 12
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_5ff3e423d3d446 171-214
+  s_71b5d6711856d1::t_72547497d5d80b 862
+sdk/dart/test/conformance_test.dart
+  s_71b5d6711856d1::t_7ed364da3ab142 1-59
+sdk/dart/test/support/vector_manifest.dart
+  s_71b5d6711856d1::t_d44362b29e58ed 1-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8e76f9aecd4b286054f5e0b35c8e97df1ba28ef8",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
