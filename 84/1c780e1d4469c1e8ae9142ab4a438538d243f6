@@ -1,0 +1,49 @@
+sdk/php/src/Metadata.php
+  s_71b5d6711856d1::t_04f1da29b2b17c 1-115
+sdk/php/src/MetadataEntry.php
+  s_71b5d6711856d1::t_2e0f86a25b9c55 1-15
+sdk/php/src/DecodeResult.php
+  s_71b5d6711856d1::t_7bf371784fe04d 1-18
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_a2cc8988c9e230 14-76
+sdk/php/tests/HeaderMetadataVectorsTest.php
+  s_71b5d6711856d1::t_134bf8160869d4 78,102,125,136,144
+  s_71b5d6711856d1::t_118154ea65c900 1-77,79-101,103-124,126-135,137-143,145-147
+sdk/php/src/DecodeOptions.php
+  s_71b5d6711856d1::t_01d5b66571d863 1-31
+sdk/php/src/Payload.php
+  s_71b5d6711856d1::t_c4b7e7e36a90a7 1-129
+sdk/php/src/UbcException.php
+  s_71b5d6711856d1::t_6a38e0ad98af31 7-12,15,17
+  s_71b5d6711856d1::t_965c4e43a9ddd8 1-6,13-14,16,18-19
+.gitignore
+  s_71b5d6711856d1::t_ffec30a6de7b33 51-55
+  s_71b5d6711856d1::t_e5c43fc5f7a3ed 56
+sdk/php/phpunit.xml
+  s_71b5d6711856d1::t_811e0cfd4e12c7 1-18
+sdk/php/src/ErrorCode.php
+  s_71b5d6711856d1::t_66606a4d5bbb49 1-20
+sdk/php/tests/PlainVectorsTest.php
+  s_71b5d6711856d1::t_5d5659dea73d40 1-112
+sdk/php/src/Header.php
+  s_71b5d6711856d1::t_d8cb68a48e9734 1-128
+sdk/php/composer.json
+  s_71b5d6711856d1::t_ec7c1fcafb7563 1-8,11-28
+  s_71b5d6711856d1::t_3dca06b241ab29 9-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "841c780e1d4469c1e8ae9142ab4a438538d243f6",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
