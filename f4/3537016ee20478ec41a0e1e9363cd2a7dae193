@@ -1,0 +1,30 @@
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_fdfe8b113855b1 78-121
+sdk/dart/lib/ubc.dart
+  s_71b5d6711856d1::t_047569a0dfb332 4
+sdk/dart/lib/src/root_accumulator.dart
+  s_71b5d6711856d1::t_289cde3fe974dc 1-42
+sdk/dart/test/encrypted_vectors_test.dart
+  s_71b5d6711856d1::t_1dfbdc3e1359b4 1-130
+sdk/dart/lib/src/crypto_internal.dart
+  s_71b5d6711856d1::t_c20e407d1e8a87 43-49,51,59,61,67,69
+  s_71b5d6711856d1::t_086d3a5a235ef8 1-42,50,52-58,60,62-66,68,70-79
+sdk/dart/lib/src/crypto.dart
+  s_71b5d6711856d1::t_643a5e2f5e1884 1-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f43537016ee20478ec41a0e1e9363cd2a7dae193",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
