@@ -119,6 +119,55 @@ inspect.
       own implementation and test suite, not an independent cryptographic library with a
       much larger audit history.)
       Maker/Checker/Human gate: Claude
+- [x] Dart streaming encoder/decoder (request-based pull async API) + verify + inspect;
+      DoS caps on untrusted lengths. Goal: streaming output identical to one-shot;
+      fail-closed; caps enforced before allocation. Constant-time compare for the
+      encrypted root.
+      (solo maker+checker+human-gate 2026-10-01. Confirmed via explicit choice (not
+      assumed) that the streaming API should be pull-based async `read(length)`/
+      `write(bytes)` methods — same conceptual shape as every other SDK's streaming API —
+      rather than a native `Stream<List<int>>`/`StreamTransformer` pipeline, to stay
+      parallel to the other 7 ports despite Dart's crypto-forced async. `Decoder`'s
+      constructor cannot itself be async (Dart constructors never are), so unlike every
+      other SDK — where header/metadata errors throw synchronously from the constructor —
+      Dart needed an explicit `Decoder.open()` async factory that eagerly parses the header
+      before returning, so callers still get the "bad header fails immediately" behavior
+      the other SDKs give for free; documented why this extra factory exists rather than
+      silently diverging. Applied the same three Rust-derived fixes from the start (re-read
+      that task's full security history in this file before writing any code): (1) the
+      encoder's chunk buffer is `min(totalSize, chunkSize)`, not `chunkSize`; (2) the
+      decoder preflights the 36-byte footer before authenticating the final encrypted
+      chunk, so ERR_TRUNCATED wins over ERR_CHUNK_AUTH per SPEC.md §5; (3) the encoder's
+      spool file is deleted in a try/finally inside `finish()`. Verified experimentally
+      (not assumed) that `RandomAccessFile.readInto(buffer, start, end)`'s `start`/`end`
+      are buffer offsets (not a length), since misreading that signature would have
+      silently corrupted chunk reads — confirmed with a throwaway script before trusting
+      the loop logic already written. Documented explicitly (Dart has neither
+      `deleteOnExit()` nor a finalizer mechanism) that an Encoder whose `finish()` is never
+      called leaks its spool file — unlike Java/.NET which have a safety net for this and
+      PHP where the runtime provides one natively, Dart genuinely has no fallback here; this
+      is a real, accepted gap, not an oversight. 45/45 `dart test` pass (37 carried forward
+      + 8 new): streamed plain output is byte-exact vs the one-shot plain-multi-3m vector
+      even written in two unequal chunks, and decodes correctly through a decoder source
+      that only ever returns 1 byte per call regardless of requested length; streamed
+      encrypted output is byte-exact vs the one-shot encrypted-chunk-1m-plus-one vector; a
+      corrupted footer and a trailing extra byte are both caught before the decoder returns
+      empty (root withheld until verified); the truncated+corrupted-final-tag scenario
+      returns ERR_TRUNCATED, not ERR_CHUNK_AUTH; an encoder with a 256 MiB chunk_size
+      against a 3-byte input round-trips without over-allocating; a streaming decoder with
+      max_chunk_len=4 against 1 MiB chunks throws ERR_TRUNCATED on the first read(); verify()
+      reports ok=false with the correct error code on a corrupted container and inspect()
+      reads only the header+metadata region, unaffected by a mangled footer. `dart analyze`
+      clean (one lint fixed: an unused-after-assignment loop variable in `verify()`,
+      restructured to avoid declaring it at all). CHECK: confirmed (same finding as the
+      Java/.NET ports) that Go's canonical `sdk/go/decoder.go` releases plain-mode chunks
+      incrementally per-read with no full-buffering spool, so Dart's `Decoder` was built
+      unbuffered for both modes to match that cross-SDK convention. SECURITY (manual):
+      chunk-length DoS caps checked before any `_readExact` allocation in the decoder,
+      matching the one-shot path's bound; root comparison reuses the hand-rolled
+      constant-time compare. No format or crypto algorithm change from the already-reviewed
+      encrypted-path task.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
