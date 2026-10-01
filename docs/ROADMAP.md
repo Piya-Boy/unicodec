@@ -11,70 +11,78 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-**Future SDKs tier — Dart SDK.** Port the frozen format to `sdk/dart/` (a pub package
-`ubc`, Dart >=3.0, `dart pub get` then `dart test` from `sdk/dart/`). The Go SDK, Python
-SDK, Rust SDK, Java SDK, .NET SDK, PHP SDK, and shared vectors in spec/vectors are the
-contract — the port must match byte-for-byte and cross-decode with
-Go/Node/Python/Rust/Java/.NET/PHP. Dart's core SDK has **zero** built-in crypto (no
-SHA-256/HMAC/AES-GCM anywhere in `dart:` libraries, confirmed by direct check before
-assuming otherwise) — this categorically breaks the "stdlib only" rule every prior SDK
-followed, so it's a real precedent, not a Dart-specific style call; the human explicitly
-chose `package:crypto` (dart-lang-team-maintained, SHA-256/HMAC only) plus
-`package:cryptography` (community, pure Dart, AES-GCM) over `package:pointycastle` as a
-single alternative, and confirmed this should proceed rather than halt as a stop-and-ask
-new-dependency decision. `package:crypto` additionally has no public constant-time-compare
-primitive (unlike every prior SDK's platform primitive — PHP's `hash_equals`, Java's
-`MessageDigest.isEqual`, .NET's `CryptographicOperations.FixedTimeEquals`) — hand-rolled
-via XOR-accumulate, never short-circuiting. No format change. `chunk_count`/`total_size`
-are true uint64: Dart's native `int` is signed 64-bit on the VM (this SDK targets the VM,
-not dart2js/web where `int` narrows to a 53-bit-safe double) — matches the Java/PHP ports'
-tradeoff, every bit pattern round-trips correctly via `ByteData.getUint64`/`setUint64`
-(core `dart:typed_data`, no package needed for that part), but magnitude comparisons use
-plain signed operators. Idiomatic Dart: `UbcException implements Exception` carrying a
-stable `ErrorCode` enum with an associated `stableId` field (Dart 2.17+ enhanced-enum
-syntax) giving the cross-SDK identifier string directly; binary data as `Uint8List`
-throughout (`dart:typed_data`, the idiomatic Dart byte-buffer type). Keep the public API
-equivalent to the other SDKs: encode/decode (one-shot), streaming encoder/decoder, verify,
-inspect.
+**Future SDKs tier — Kotlin SDK.** Port the frozen format to `sdk/kotlin/` (package
+`dev.ubc`, plain `kotlinc` CLI — no Gradle; see `sdk/kotlin/run-tests.ps1`). The Go SDK,
+Python SDK, Rust SDK, Java SDK, .NET SDK, PHP SDK, Dart SDK, and shared vectors in
+spec/vectors are the contract — the port must match byte-for-byte and cross-decode with
+Go/Node/Python/Rust/Java/.NET/PHP/Dart. Neither Gradle nor kotlinc were present on this
+machine; kotlinc was downloaded as a standalone release zip and extracted under the
+session scratchpad (no system install, no elevation) after a `choco install kotlinc`
+attempt failed on a lock-file conflict while not running elevated — confirmed with the
+human to skip the system package manager rather than request elevation. Kotlin runs on
+the JVM, so unlike Dart it has full interop access to `java.security`/`javax.crypto` —
+genuinely stdlib-equivalent crypto via JVM interop, not a third-party package, matching the
+Java SDK's approach exactly (`MessageDigest`, `Mac`, `Cipher` with `AES/GCM/NoPadding`). No
+format change. `chunk_count`/`total_size` are true uint64: stored as Kotlin's `Long` (JVM
+signed 64-bit, identical constraint to the Java port) — every bit pattern treated as valid,
+no `Long.compareUnsigned`-free shortcuts assumed. Idiomatic Kotlin: `UbcException :
+RuntimeException` with a `code: ErrorCode` property (no collision risk the way PHP's
+`$code`/`\Exception::$code` or a hypothetical JVM `Throwable.code` would — `Throwable` has
+no such property, confirmed before assuming it was safe) carrying a stable `ErrorCode` enum
+with a `stableId` field. No test framework (no JUnit/Gradle) — a minimal hand-written
+`TestRunner` object registers named test closures and reports pass/fail, confirmed as the
+deliberate choice over setting up a second build-tool bootstrap this session. Keep the
+public API equivalent to the other SDKs: encode/decode (one-shot), streaming encoder/
+decoder, verify, inspect.
 
-- [x] Dart scaffold + plain path: `sdk/dart/` pub package `ubc`, `ErrorCode` enum with a
-      `stableId` field mapping every stable error id (SPEC.md §5), `UbcException`, header +
-      TLV encode/parse, chunking + SHA-256 flat root one-shot encode/decode. Goal:
-      header/TLV round-trip matching shared vector bytes; plain path byte-exact to every
-      plain vector; ERR_ROOT_MISMATCH on a flipped byte.
-      (solo maker+checker+human-gate 2026-10-01, continuing per "ต่อ" instruction. Dart SDK
-      3.13.2 already present on this Windows machine; Swift/Kotlin/Ruby toolchains absent
-      (Swift has poor native Windows support, Kotlin needs a separate kotlinc install, Ruby
-      isn't installed) — surfaced this gap and confirmed starting with Dart rather than
-      installing the others or stopping, since Future SDKs is explicitly a separate
-      lower-priority tier. `Platform.script.toFilePath()` resolved the wrong path for vector
-      lookup under `dart test`'s runner context (the test bundler, not the source file);
-      fixed by resolving from `Directory.current.path`, which `dart test` always sets to the
-      package root. Experimentally confirmed (not assumed) that `AccumulatorSink`/
-      `startChunkedConversion`'s chunked-hash API wasn't usable as initially written — its
-      `DigestSink` type is package-internal, not exported from `package:crypto/crypto.dart`
-      — so root-hash computation was rewritten to build the full root_input via
-      `BytesBuilder` and call `sha256.convert()` once, rather than fighting the chunked
-      conversion API; `dart analyze` caught the dead import immediately. 26/26 `dart test`
-      pass (19 header/metadata + 7 plain): all positive vectors' headers round-trip
-      byte-exact, plain-metadata TLV round-trips byte-exact, 9 header/metadata negative
-      vectors return their exact stable error ids, metadata encoder sorts tags and rejects
-      duplicates, metadata length cap is checked before copying entries; all 6 plain vectors
-      (empty, one-byte, chunk-1m, chunk-1m-plus-one, multi-3m, metadata) encode byte-exact
-      and decode back to exact input; a flipped payload byte returns ERR_ROOT_MISMATCH;
-      negative-truncated/root-mismatch/trailing-data/oversized-clen return their exact
-      stable error ids. `dart analyze` clean (strict-casts/strict-inference/strict-raw-types
-      enabled, the Dart analyzer's closest equivalent to clippy -D warnings /
-      TreatWarningsAsErrors). CHECK: UTF-8 filename validation uses
-      `Utf8Decoder(allowMalformed: false)`, experimentally confirmed to reject overlong
-      encodings (0xC0 0x80) and unpaired surrogates (0xED 0xA0 0x80) the same way every
-      other SDK's strict decoder does. SECURITY (manual): DoS caps
-      (`maxChunkLen`/`maxChunkCount`/`maxTotalSize`) checked before any chunk-bytes copy;
-      root comparison uses a hand-rolled constant-time XOR-accumulate compare (documented
-      above as the one real primitive gap vs. every prior SDK, since `package:crypto`
-      exposes none). No format or crypto algorithm change — scaffold + plain only, no AEAD
-      code yet.)
+- [x] Kotlin scaffold: `sdk/kotlin/` package `dev.ubc`, `ErrorCode` enum with a `stableId`
+      field mapping every stable error id (SPEC.md §5), `UbcException`, header + TLV
+      encode/parse. Goal: header/TLV round-trip; matches the header/metadata bytes in the
+      shared vectors.
+      (solo maker+checker+human-gate 2026-10-02, continuing per "ต่อ" instruction. kotlinc
+      wasn't on PATH; `choco install kotlinc -y` failed not-elevated with a lock-file
+      conflict on its own bundled OpenJDK dependency (ignoring the JDK 17 already present
+      from the Java SDK work) — surfaced this to the human rather than retrying elevated,
+      and per explicit confirmation skipped choco entirely: downloaded the official
+      `kotlin-compiler-2.1.0.zip` release directly from the JetBrains GitHub releases page
+      and extracted it under the session scratchpad, no system install, no elevation.
+      Confirmed with kotlinc -version that it correctly picks up the existing JDK 17 via
+      JAVA_HOME. No Gradle either — confirmed explicitly with the human to use plain
+      kotlinc CLI compilation instead of bootstrapping a second build-tool wrapper dance
+      this session (already did one for Java's Maven Wrapper); wrote a minimal
+      `TestRunner` object (register named closures, run them all, report pass/fail, exit
+      non-zero on any failure) since no JUnit/Gradle test runner is available, plus
+      `run-tests.ps1` wrapping the compile+run invocation. Applied the Java port's
+      defensive-copy lesson for `Header.baseNonce` from the very first draft (constructor
+      copies on the way in, `baseNonce()` accessor copies on the way out) instead of
+      shipping the mutable-array bug and rediscovering it via security review. 19/19 tests
+      pass (hand-written harness, not a framework test count): all positive vectors'
+      headers round-trip byte-exact, plain-metadata TLV round-trips byte-exact, 9
+      header/metadata negative vectors return their exact stable error ids, metadata
+      encoder sorts tags and rejects duplicates, metadata length cap is checked before
+      copying entries. `kotlinc` compiles with no warnings. CHECK: `UbcException`'s `code`
+      property doesn't collide with anything on JVM `Throwable` (confirmed by checking —
+      unlike PHP's `\Exception::$code`, Kotlin/Java's `Throwable` declares no such
+      property, so no rename was needed the way PHP required `errorCode`). SECURITY
+      (manual): DoS-relevant length checks in `Metadata.parse` happen before any entry
+      value is copied out of the input buffer. No crypto/format code yet — JVM-interop
+      crypto wiring (java.security/javax.crypto, same as the Java SDK) starts next task
+      (plain path).)
       Maker/Checker/Human gate: Claude
+
+---
+
+## Completed: Future SDKs tier — Dart SDK
+
+Port the frozen format to `sdk/dart/` (a pub package `ubc`, Dart >=3.0). Dart's core SDK
+has zero built-in crypto — the human explicitly chose `package:crypto` (dart-lang-team-
+maintained, SHA-256/HMAC) plus `package:cryptography` (community, pure Dart, AES-GCM) as
+the project's first non-stdlib runtime dependency, confirming this proceed rather than
+halt as a stop-and-ask new-dependency decision. `chunk_count`/`total_size` use Dart's
+signed 64-bit `int` (VM target), matching the Java/PHP ports' tradeoff. `UbcException
+implements Exception` with an `ErrorCode` enum carrying a `stableId` field. Encrypted path
+is `Future`-based throughout — `package:cryptography`'s sync methods are internal-only.
+
 - [x] Dart encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
       sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
       Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
@@ -857,10 +865,11 @@ Same port process as Phase 3 (scaffold+plain, encrypted, streaming, conformance 
 cross-decode). Toolchain availability checked 2026-10-01 on this Windows dev machine:
 Dart 3.13.2 present; Swift (poor native Windows support), Kotlin (needs separate kotlinc
 install), and Ruby (not installed) all absent — Dart started first for that reason, not
-priority order.
+priority order. Kotlin's kotlinc was subsequently obtained 2026-10-02 as a standalone
+release zip (no system install) after a `choco install` attempt failed not-elevated.
 
 - [x] Dart
-- [ ] Kotlin
+- [~] Kotlin — in progress (see Active work above)
 - [ ] Swift
 - [ ] Ruby
 

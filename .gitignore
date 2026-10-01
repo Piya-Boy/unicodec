@@ -59,3 +59,6 @@ __pycache__/
 /sdk/dart/.dart_tool/
 /sdk/dart/pubspec.lock
 /sdk/dart/.packages
+
+# Kotlin
+/sdk/kotlin/build/
