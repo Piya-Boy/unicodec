@@ -1,0 +1,41 @@
+tools/crossdecode/main.go
+  s_71b5d6711856d1::t_0b3eb55424c84f 86
+  s_71b5d6711856d1::t_dccc64a73f758e 60
+  s_71b5d6711856d1::t_c06db87ac4a0f6 213-215
+  s_71b5d6711856d1::t_51e74d0fe02f49 49,55
+  s_71b5d6711856d1::t_5dfccc669fe605 168
+sdk/php/tests/ConformanceTest.php
+  s_71b5d6711856d1::t_409856c4dde5ec 1-62
+sdk/php/tests/Support/VectorManifest.php
+  s_71b5d6711856d1::t_ee1db18c747748 1-154
+scripts/cross-decode-python.py
+  s_71b5d6711856d1::t_a492ebf96fcbdd 45
+scripts/cross-decode.mjs
+  s_71b5d6711856d1::t_8ce6ff1870d43e 130-132
+  s_71b5d6711856d1::t_a024928eb8ac5b 182
+  s_71b5d6711856d1::t_c36d3cc62960d8 145,151,163-164,170,176
+  s_71b5d6711856d1::t_3bd0d55dd7dbcd 37-43
+sdk/php/composer.json
+  s_71b5d6711856d1::t_8667eb34dd4a05 13-14
+sdk/php/bin/cross-decode.php
+  s_71b5d6711856d1::t_339e33688b0374 1-180
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_a5d7205bb38af9 134-168
+  s_71b5d6711856d1::t_b03153f28eb110 643
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1a126782ccc293981b7be60e3f12af6103d49555",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
