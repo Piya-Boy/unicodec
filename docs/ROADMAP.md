@@ -11,28 +11,85 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-**Phase 3 — PHP SDK.** Port the frozen format to `sdk/php/` (a Composer package `ubc/ubc`,
-PHP >=8.2, with PHPUnit as a dev-only dependency — `composer install` then `vendor/bin/
-phpunit` from `sdk/php/`). The Go SDK, Python SDK, Rust SDK, Java SDK, .NET SDK, and shared
-vectors in spec/vectors are the contract — the port must match byte-for-byte and
-cross-decode with Go/Node/Python/Rust/Java/.NET. Crypto from PHP core/ext-openssl/ext-hash
+**Future SDKs tier — Dart SDK.** Port the frozen format to `sdk/dart/` (a pub package
+`ubc`, Dart >=3.0, `dart pub get` then `dart test` from `sdk/dart/`). The Go SDK, Python
+SDK, Rust SDK, Java SDK, .NET SDK, PHP SDK, and shared vectors in spec/vectors are the
+contract — the port must match byte-for-byte and cross-decode with
+Go/Node/Python/Rust/Java/.NET/PHP. Dart's core SDK has **zero** built-in crypto (no
+SHA-256/HMAC/AES-GCM anywhere in `dart:` libraries, confirmed by direct check before
+assuming otherwise) — this categorically breaks the "stdlib only" rule every prior SDK
+followed, so it's a real precedent, not a Dart-specific style call; the human explicitly
+chose `package:crypto` (dart-lang-team-maintained, SHA-256/HMAC only) plus
+`package:cryptography` (community, pure Dart, AES-GCM) over `package:pointycastle` as a
+single alternative, and confirmed this should proceed rather than halt as a stop-and-ask
+new-dependency decision. `package:crypto` additionally has no public constant-time-compare
+primitive (unlike every prior SDK's platform primitive — PHP's `hash_equals`, Java's
+`MessageDigest.isEqual`, .NET's `CryptographicOperations.FixedTimeEquals`) — hand-rolled
+via XOR-accumulate, never short-circuiting. No format change. `chunk_count`/`total_size`
+are true uint64: Dart's native `int` is signed 64-bit on the VM (this SDK targets the VM,
+not dart2js/web where `int` narrows to a 53-bit-safe double) — matches the Java/PHP ports'
+tradeoff, every bit pattern round-trips correctly via `ByteData.getUint64`/`setUint64`
+(core `dart:typed_data`, no package needed for that part), but magnitude comparisons use
+plain signed operators. Idiomatic Dart: `UbcException implements Exception` carrying a
+stable `ErrorCode` enum with an associated `stableId` field (Dart 2.17+ enhanced-enum
+syntax) giving the cross-SDK identifier string directly; binary data as `Uint8List`
+throughout (`dart:typed_data`, the idiomatic Dart byte-buffer type). Keep the public API
+equivalent to the other SDKs: encode/decode (one-shot), streaming encoder/decoder, verify,
+inspect.
+
+- [x] Dart scaffold + plain path: `sdk/dart/` pub package `ubc`, `ErrorCode` enum with a
+      `stableId` field mapping every stable error id (SPEC.md §5), `UbcException`, header +
+      TLV encode/parse, chunking + SHA-256 flat root one-shot encode/decode. Goal:
+      header/TLV round-trip matching shared vector bytes; plain path byte-exact to every
+      plain vector; ERR_ROOT_MISMATCH on a flipped byte.
+      (solo maker+checker+human-gate 2026-10-01, continuing per "ต่อ" instruction. Dart SDK
+      3.13.2 already present on this Windows machine; Swift/Kotlin/Ruby toolchains absent
+      (Swift has poor native Windows support, Kotlin needs a separate kotlinc install, Ruby
+      isn't installed) — surfaced this gap and confirmed starting with Dart rather than
+      installing the others or stopping, since Future SDKs is explicitly a separate
+      lower-priority tier. `Platform.script.toFilePath()` resolved the wrong path for vector
+      lookup under `dart test`'s runner context (the test bundler, not the source file);
+      fixed by resolving from `Directory.current.path`, which `dart test` always sets to the
+      package root. Experimentally confirmed (not assumed) that `AccumulatorSink`/
+      `startChunkedConversion`'s chunked-hash API wasn't usable as initially written — its
+      `DigestSink` type is package-internal, not exported from `package:crypto/crypto.dart`
+      — so root-hash computation was rewritten to build the full root_input via
+      `BytesBuilder` and call `sha256.convert()` once, rather than fighting the chunked
+      conversion API; `dart analyze` caught the dead import immediately. 26/26 `dart test`
+      pass (19 header/metadata + 7 plain): all positive vectors' headers round-trip
+      byte-exact, plain-metadata TLV round-trips byte-exact, 9 header/metadata negative
+      vectors return their exact stable error ids, metadata encoder sorts tags and rejects
+      duplicates, metadata length cap is checked before copying entries; all 6 plain vectors
+      (empty, one-byte, chunk-1m, chunk-1m-plus-one, multi-3m, metadata) encode byte-exact
+      and decode back to exact input; a flipped payload byte returns ERR_ROOT_MISMATCH;
+      negative-truncated/root-mismatch/trailing-data/oversized-clen return their exact
+      stable error ids. `dart analyze` clean (strict-casts/strict-inference/strict-raw-types
+      enabled, the Dart analyzer's closest equivalent to clippy -D warnings /
+      TreatWarningsAsErrors). CHECK: UTF-8 filename validation uses
+      `Utf8Decoder(allowMalformed: false)`, experimentally confirmed to reject overlong
+      encodings (0xC0 0x80) and unpaired surrogates (0xED 0xA0 0x80) the same way every
+      other SDK's strict decoder does. SECURITY (manual): DoS caps
+      (`maxChunkLen`/`maxChunkCount`/`maxTotalSize`) checked before any chunk-bytes copy;
+      root comparison uses a hand-rolled constant-time XOR-accumulate compare (documented
+      above as the one real primitive gap vs. every prior SDK, since `package:crypto`
+      exposes none). No format or crypto algorithm change — scaffold + plain only, no AEAD
+      code yet.)
+      Maker/Checker/Human gate: Claude
+
+---
+
+## Completed: Phase 3 — PHP SDK
+
+Port the frozen format to `sdk/php/` (a Composer package `ubc/ubc`, PHP >=8.2, PHPUnit
+dev-only). The Go SDK, Python SDK, Rust SDK, Java SDK, .NET SDK, and shared vectors in
+spec/vectors are the contract — the port matches byte-for-byte and cross-decodes with
+Go/Node/Python/Rust/Java/.NET. Crypto from PHP core/ext-openssl/ext-hash
 (`hash()`/`hash_hmac()`/`hash_equals()`, `openssl_encrypt`/`openssl_decrypt` with
-`aes-256-gcm`) — bundled extensions, not third-party packages. No format change.
-`chunk_count`/`total_size` are true uint64, but PHP has no native unsigned 64-bit type at
-all (native `int` is signed 64-bit, no `compareUnsigned`-equivalent builtin, and ext-gmp
-for full correctness was explicitly declined as unneeded machinery for an unreachable
-boundary): matches the Java port's tradeoff — every bit pattern round-trips correctly
-through `pack('P', ...)`/`unpack('P', ...)` (verified experimentally with an all-bits-set
-value), but magnitude comparisons use plain signed operators and values above
-`PHP_INT_MAX` simply cannot be represented. Idiomatic PHP: `UbcException extends
-\RuntimeException` carrying a stable `ErrorCode` backed enum (`->value` gives the stable
-identifier string directly, no separate mapping method needed) — note the property is
-named `errorCode`, not `code`, because `\Exception` already declares a non-readonly `$code`
-property for `getCode()` and a promoted readonly `$code` would collide with it (hit this as
-a real fatal error before the fix); binary data (metadata values, chunk bytes, nonces,
-keys) represented as PHP `string` throughout, the idiomatic PHP byte-string convention, not
-an array of ints. Keep the public API equivalent to the other SDKs: encode/decode
-(one-shot), streaming encoder/decoder, verify, inspect.
+`aes-256-gcm`) — bundled extensions, not third-party packages. `chunk_count`/`total_size`
+use PHP's signed 64-bit `int` with no unsigned-compare helper (ext-gmp declined as
+unneeded for an unreachable boundary). `UbcException extends \RuntimeException` with an
+`errorCode` property (not `code` — collides with `\Exception::$code`); binary data as PHP
+`string` throughout.
 
 - [x] PHP scaffold + plain path: `sdk/php/` Composer package `ubc/ubc`, `ErrorCode` backed
       enum mapping every stable error id (SPEC.md §5), `UbcException`, header + TLV
@@ -659,7 +716,16 @@ Each SDK gate: 100% vector pass + cross-decode with Go/Node. No SDK ships withou
 
 ## Future SDKs
 
-Swift, Kotlin, Dart, Ruby — same port process as Phase 3.
+Same port process as Phase 3 (scaffold+plain, encrypted, streaming, conformance +
+cross-decode). Toolchain availability checked 2026-10-01 on this Windows dev machine:
+Dart 3.13.2 present; Swift (poor native Windows support), Kotlin (needs separate kotlinc
+install), and Ruby (not installed) all absent — Dart started first for that reason, not
+priority order.
+
+- [~] Dart — in progress (see Active work above)
+- [ ] Kotlin
+- [ ] Swift
+- [ ] Ruby
 
 ---
 
