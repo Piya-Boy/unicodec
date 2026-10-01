@@ -75,6 +75,50 @@ inspect.
       exposes none). No format or crypto algorithm change — scaffold + plain only, no AEAD
       code yet.)
       Maker/Checker/Human gate: Claude
+- [x] Dart encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+      sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
+      Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
+      plaintext on failure. CRYPTO-CRITICAL.
+      (solo maker+checker+human-gate 2026-10-01. `Crypto.encodeEncrypted`/
+      `encodeEncryptedWithFixedNonce`/`decodeEncrypted` added using `package:cryptography`'s
+      `AesGcm` and `package:crypto`'s `Hmac`. Discovered mid-implementation that
+      `encryptSync`/`decryptSync` exist only on the package's internal `DartAesGcm` class,
+      not on the public `AesGcm` type returned by `AesGcm.with256bits()` — confirmed by
+      reading the package source, not by trial and error against the compiler alone — so
+      the one-shot and (later) streaming encrypted paths had to become `Future`-based
+      throughout, a real divergence from every prior SDK's synchronous one-shot API, forced
+      by the dependency rather than a Dart idiom choice. Before trusting fail-closed
+      behavior, read `DartAesGcm.decryptSync`'s source directly and confirmed the MAC
+      comparison (`if (calculatedMac != mac) throw SecretBoxAuthenticationError()`) happens
+      before the XOR-decrypt loop that produces plaintext runs at all — verify-before-release
+      holds by construction. Independently verified the `rootKey` HKDF derivation against
+      spec/vectors.json's standalone known-answer fixture via a throwaway test file *before*
+      writing Crypto.dart itself (not after), since `package:crypto`'s `Hmac(hash, key)`
+      constructor's key-first argument order is an easy place to transpose silently;
+      confirmed byte-exact on the first attempt once the order was worked out deliberately.
+      37/37 `dart test` pass (26 carried forward + 11 new): all 6 encrypted vectors encode
+      byte-exact and decode back to exact input; the HKDF root_key derivation matches the
+      shared known-answer fixture independent of any container; negative-chunk-auth/
+      encrypted-short-clen/encrypted-metadata-tamper return ERR_CHUNK_AUTH; negative-
+      missing-key/encrypted-cap-missing-key (decoded with no key) return ERR_MISSING_KEY;
+      negative-encrypted-empty-wrong-key (decoded with the vector's own wrong key) returns
+      ERR_ROOT_MISMATCH; a wrong key against a non-empty container also returns
+      ERR_CHUNK_AUTH. `dart analyze` clean. CHECK: nonce = base_nonce XOR le96(i), AAD =
+      header_bytes ‖ SHA-256(meta_region) ‖ le64(i) match spec exactly; both directions
+      derive the root key identically. SECURITY (manual): `Random.secure()` (Dart's CSPRNG,
+      not plain `Random()`) generates `encodeEncrypted`'s base_nonce, never reused across
+      containers; root comparison reuses the same hand-rolled constant-time XOR-accumulate
+      compare from the plain path (still the one real primitive gap vs. every prior SDK's
+      platform constant-time-compare function); `clen < CryptoInternal.gcmTagSize` rejected
+      as ERR_CHUNK_AUTH before any decrypt attempt; reader precedence matches SPEC.md §5.
+      No format change; crypto matches SPEC.md §3-4 exactly. One residual, explicitly
+      accepted risk carried from the human's package choice: `package:cryptography`'s
+      AES-GCM is a pure-Dart reimplementation of the algorithm, not a binding to a
+      hardware-accelerated/widely-audited native library the way OpenSSL/BoringSSL/JCA
+      back every other SDK's AEAD — correctness here rests on this one community package's
+      own implementation and test suite, not an independent cryptographic library with a
+      much larger audit history.)
+      Maker/Checker/Human gate: Claude
 
 ---
 

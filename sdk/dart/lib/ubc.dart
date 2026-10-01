@@ -1,6 +1,7 @@
 /// Universal Binary Container (UBC) v1 reference SDK for Dart.
 library;
 
+export 'src/crypto.dart';
 export 'src/decode_options.dart';
 export 'src/decode_result.dart';
 export 'src/error_code.dart';
