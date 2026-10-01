@@ -93,6 +93,44 @@ an array of ints. Keep the public API equivalent to the other SDKs: encode/decod
       attempt; reader precedence matches SPEC.md §5. No format change; crypto matches
       SPEC.md §3-4 exactly.)
       Maker/Checker/Human gate: Claude
+- [x] PHP streaming encoder/decoder (PHP stream resources) + verify + inspect; DoS caps on
+      untrusted lengths. Goal: streaming output identical to one-shot; fail-closed; caps
+      enforced before allocation. Constant-time compare for the encrypted root.
+      (solo maker+checker+human-gate 2026-10-01. Confirmed via explicit tool-call (not
+      assumed) that PHP has no Stream/InputStream base class, then built Encoder/Decoder
+      around plain PHP stream resources (`fopen`/`fread`/`fwrite`) — PHP's own native idiom,
+      works with any real stream (file, `php://temp`, socket) with no adapter interface.
+      Extracted shared nonce/AAD/root-key/GCM primitives into `CryptoInternal` (and a
+      `RootAccumulator` wrapping the plain-SHA-256-vs-keyed-HMAC branch) before writing
+      Encoder/Decoder, same approach as the Java and .NET ports. Applied the same three
+      Rust-derived fixes from the start (re-read that task's full security history in this
+      file before writing any code): (1) the encoder reads exactly `min(totalSize,
+      chunkSize)` per chunk via a bounded `readExact`, never over-allocates; (2) the decoder
+      preflights the 36-byte footer before authenticating the final encrypted chunk, so
+      ERR_TRUNCATED wins over ERR_CHUNK_AUTH per SPEC.md §5; (3) the encoder's spool —
+      unlike Java/.NET, PHP's `tmpfile()` already creates the spool with safe permissions
+      and auto-removes it on close or script end, even for an abandoned Encoder, so neither
+      a `deleteOnExit()`-style call nor a finalizer was needed here; documented why rather
+      than silently omitting the safety net the other two ports needed. 45/45 PHPUnit tests
+      pass (37 carried forward + 8 new): streamed plain output is byte-exact vs the one-shot
+      plain-multi-3m vector even written in two unequal chunks, and decodes correctly
+      through a decoder read one byte at a time; streamed encrypted output is byte-exact vs
+      the one-shot encrypted-chunk-1m-plus-one vector; a corrupted footer and a trailing
+      extra byte are both caught before the decoder returns an empty string (root withheld
+      until verified); the truncated+corrupted-final-tag scenario returns ERR_TRUNCATED, not
+      ERR_CHUNK_AUTH; an encoder with a 256 MiB chunk_size against a 3-byte input round-trips
+      without over-allocating; a streaming decoder with max_chunk_len=4 against 1 MiB chunks
+      throws ERR_TRUNCATED on the first read(); verify() reports ok=false with the correct
+      error code on a corrupted container and inspect() reads only the header+metadata
+      region, unaffected by a mangled footer. `vendor/bin/phpunit` clean. CHECK: confirmed
+      `fread()` at true end-of-stream returns `''` (empty string), not `false`, for
+      `php://temp`-style wrappers — verified experimentally before relying on it for the
+      trailing-data check, rather than assuming PHP's EOF-signaling convention matched
+      another language's. SECURITY (manual): chunk-length DoS caps checked before any
+      `readExact` allocation in the decoder, matching the one-shot path's bound; `hash_equals()`
+      used for the root comparison. No format or crypto algorithm change from the
+      already-reviewed encrypted-path task.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
