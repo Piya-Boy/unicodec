@@ -69,6 +69,28 @@ decoder, verify, inspect.
       crypto wiring (java.security/javax.crypto, same as the Java SDK) starts next task
       (plain path).)
       Maker/Checker/Human gate: Claude
+- [x] Kotlin plain path: chunking + SHA-256 flat root; one-shot encode/decode.
+      Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
+      (solo maker+checker+human-gate 2026-10-02. `Payload.encodePlain`/`decodePlain` added
+      using `java.security.MessageDigest` (JCA SHA-256, JVM interop, stdlib-equivalent —
+      same reasoning and same primitive as the Java SDK). Applied the Java port's
+      chunk-size-above-Int.MAX_VALUE fix from the first draft: the chunking loop uses `Long`
+      stride/offset arithmetic throughout (`var offset = 0L`, `offset += chunkSize`) and
+      only narrows to `Int` for the per-slice `copyOfRange` call, which is always bounded by
+      the real array length — never risked rediscovering the stride-wrapping bug the Java
+      port needed a security review to catch. 26/26 tests pass (19 carried forward + 7
+      new): all 6 plain vectors (empty, one-byte, chunk-1m, chunk-1m-plus-one, multi-3m,
+      metadata) encode byte-exact and decode back to their exact input bytes; a flipped
+      payload byte returns ERR_ROOT_MISMATCH; negative-truncated/root-mismatch/trailing-
+      data/oversized-clen vectors return their exact stable error ids. `kotlinc` compiles
+      clean. CHECK: reader precedence (header → metadata → missing-key → payload framing/
+      truncated-footer → root mismatch → trailing-data) matches SPEC.md §5 exactly, same
+      order as every other SDK. SECURITY (manual): DoS caps (`maxChunkLen`/`maxChunkCount`/
+      `maxTotalSize`) checked before any chunk bytes are copied or hashed;
+      `MessageDigest.isEqual` used for the root comparison (constant-time, the correct JCA
+      primitive — not a hand-rolled compare, unlike the Dart port which had no such
+      primitive available). No format or crypto algorithm change.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
