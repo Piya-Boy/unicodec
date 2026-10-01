@@ -1,0 +1,27 @@
+sdk/php/tests/EncryptedVectorsTest.php
+  s_71b5d6711856d1::t_f7ed943f3dea8b 1-158
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_336ade3d7aa6f7 63-95
+sdk/php/src/CryptoInternal.php
+  s_71b5d6711856d1::t_44f385fcc0848f 1-72
+sdk/php/src/RootAccumulator.php
+  s_71b5d6711856d1::t_3a9d66e1be7feb 1-47
+sdk/php/src/Crypto.php
+  s_71b5d6711856d1::t_4d6fea659ba5a7 1-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b720c161246b73a0db1a79117efd231b546dbce7",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
