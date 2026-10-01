@@ -1,0 +1,38 @@
+sdk/dotnet/src/Ubc/Streaming.cs
+  s_71b5d6711856d1::t_4b84fa4de1de8a 1-97
+sdk/dotnet/tests/Ubc.Tests/StreamingTests.cs
+  s_71b5d6711856d1::t_8e170940ce0e9b 1-222
+sdk/dotnet/src/Ubc/ContainerInfo.cs
+  s_71b5d6711856d1::t_82d888af3eb890 1-29
+sdk/dotnet/src/Ubc/Decoder.cs
+  s_71b5d6711856d1::t_030adc4bdc7d49 1-83,93-255
+  s_71b5d6711856d1::t_9e5af48dc03de7 84-92
+sdk/dotnet/src/Ubc/Encoder.cs
+  s_71b5d6711856d1::t_c6ac97efda0f71 174-181,203,206-217
+  s_71b5d6711856d1::t_13629b5894a889 230
+  s_71b5d6711856d1::t_607eee6c62c864 1-26,29,43-173,182-202,204-205,218-229,231-232
+  s_71b5d6711856d1::t_166eb4c488ca82 27-28,30-33,42
+  s_71b5d6711856d1::t_58f053e79e3134 34-41
+sdk/dotnet/src/Ubc/EncodeOptions.cs
+  s_71b5d6711856d1::t_e9d18d0e1c8a68 1-44
+sdk/dotnet/src/Ubc/VerifyReport.cs
+  s_71b5d6711856d1::t_08c8861de3fc18 1-14
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_ded993dcf49444 105-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8446004ef0225bf1ec7bd5432b2a2477c10e6ccd",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
