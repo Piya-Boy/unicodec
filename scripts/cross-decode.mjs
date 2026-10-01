@@ -53,6 +53,28 @@ function execDartCrossDecode(dartArgs) {
     : execFile(dartCommand, ["run", "bin/cross_decode.dart", ...dartArgs], { cwd: dartDir });
 }
 
+const kotlinDir = resolve(repoRoot, "sdk", "kotlin");
+const kotlincCommand = process.env.KOTLINC; // no system kotlinc on this machine; must be set explicitly
+const javaExeCommand = process.env.JAVA_EXE ?? "java";
+const kotlinJar = resolve(kotlinDir, "build", "crossdecode.jar");
+
+async function buildKotlinCrossDecodeJar() {
+  if (!kotlincCommand) {
+    throw new Error("KOTLINC env var must point to kotlinc(.bat) to run the Kotlin cross-decode CLI");
+  }
+  const kotlincArgs = ["src/main/kotlin", "src/test/kotlin", "src/tools/kotlin", "-include-runtime", "-d", "build/crossdecode.jar"];
+  // kotlinc.bat is a batch file on Windows; Node's execFile cannot spawn it directly
+  // (EINVAL), same issue the Maven/.NET/Dart wrappers hit earlier in this script.
+  await (isWindows
+    ? execFile("cmd.exe", ["/c", kotlincCommand, ...kotlincArgs], { cwd: kotlinDir })
+    : execFile(kotlincCommand, kotlincArgs, { cwd: kotlinDir }));
+}
+
+async function execKotlinCrossDecode(kotlinArgs) {
+  await buildKotlinCrossDecodeJar();
+  return execFile(javaExeCommand, ["-cp", kotlinJar, "dev.ubc.tools.CrossDecodeKt", ...kotlinArgs], { cwd: kotlinDir });
+}
+
 function safeId(value) {
   return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
@@ -143,7 +165,9 @@ async function main() {
     await execPhpCrossDecode([...phpArguments, "--write"]);
     const dartArguments = ["--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")];
     await execDartCrossDecode([...dartArguments, "--write"]);
-    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java", "--dotnet", "--php", "--dart"], { cwd: repoRoot });
+    const kotlinArguments = ["--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")];
+    await execKotlinCrossDecode([...kotlinArguments, "--write"]);
+    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java", "--dotnet", "--php", "--dart", "--kotlin"], { cwd: repoRoot });
 
     for (const id of caseIDs) {
       const vector = byID.get(id);
@@ -158,6 +182,7 @@ async function main() {
       const dotnetFresh = await readFile(safeChild(workDir, `${id}.dotnet.ubc`));
       const phpFresh = await readFile(safeChild(workDir, `${id}.php.ubc`));
       const dartFresh = await readFile(safeChild(workDir, `${id}.dart.ubc`));
+      const kotlinFresh = await readFile(safeChild(workDir, `${id}.kotlin.ubc`));
       const decoded = decodeBytes(goFresh, options.key === undefined ? {} : { key: options.key });
       const pythonDecoded = decodeBytes(pythonFresh, options.key === undefined ? {} : { key: options.key });
       const rustDecoded = decodeBytes(rustFresh, options.key === undefined ? {} : { key: options.key });
@@ -165,6 +190,7 @@ async function main() {
       const dotnetDecoded = decodeBytes(dotnetFresh, options.key === undefined ? {} : { key: options.key });
       const phpDecoded = decodeBytes(phpFresh, options.key === undefined ? {} : { key: options.key });
       const dartDecoded = decodeBytes(dartFresh, options.key === undefined ? {} : { key: options.key });
+      const kotlinDecoded = decodeBytes(kotlinFresh, options.key === undefined ? {} : { key: options.key });
 
       assert.ok(decoded.data.equals(input), `${id}: Go-decoded plaintext differs from manifest input`);
       assertMetadata(decoded.meta, entries);
@@ -180,6 +206,8 @@ async function main() {
       assertMetadata(phpDecoded.meta, entries);
       assert.ok(dartDecoded.data.equals(input), `${id}: Dart-decoded plaintext differs from manifest input`);
       assertMetadata(dartDecoded.meta, entries);
+      assert.ok(kotlinDecoded.data.equals(input), `${id}: Kotlin-decoded plaintext differs from manifest input`);
+      assertMetadata(kotlinDecoded.meta, entries);
       assert.ok(encodeBytes(decoded.data, decoded.meta, options).equals(nodeFresh), `${id}: Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(pythonDecoded.data, pythonDecoded.meta, options).equals(nodeFresh), `${id}: Python-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(rustDecoded.data, rustDecoded.meta, options).equals(nodeFresh), `${id}: Rust-to-Node re-encode is not byte-identical`);
@@ -187,6 +215,7 @@ async function main() {
       assert.ok(encodeBytes(dotnetDecoded.data, dotnetDecoded.meta, options).equals(nodeFresh), `${id}: .NET-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(phpDecoded.data, phpDecoded.meta, options).equals(nodeFresh), `${id}: PHP-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(dartDecoded.data, dartDecoded.meta, options).equals(nodeFresh), `${id}: Dart-to-Node re-encode is not byte-identical`);
+      assert.ok(encodeBytes(kotlinDecoded.data, kotlinDecoded.meta, options).equals(nodeFresh), `${id}: Kotlin-to-Node re-encode is not byte-identical`);
       assert.ok(goFresh.equals(nodeFresh), `${id}: fresh Go and Node containers differ`);
       assert.ok(goFresh.equals(pythonFresh), `${id}: fresh Go and Python containers differ`);
       assert.ok(goFresh.equals(rustFresh), `${id}: fresh Go and Rust containers differ`);
@@ -194,6 +223,7 @@ async function main() {
       assert.ok(goFresh.equals(dotnetFresh), `${id}: fresh Go and .NET containers differ`);
       assert.ok(goFresh.equals(phpFresh), `${id}: fresh Go and PHP containers differ`);
       assert.ok(goFresh.equals(dartFresh), `${id}: fresh Go and Dart containers differ`);
+      assert.ok(goFresh.equals(kotlinFresh), `${id}: fresh Go and Kotlin containers differ`);
     }
     await execFile(pythonCommand, [pythonDriver, "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--verify"], { cwd: repoRoot });
     await execFile(cargoCommand, [...rustArguments, "--verify"], { cwd: repoRoot });
@@ -201,6 +231,7 @@ async function main() {
     await execCrossDecode([...dotnetArguments, "--verify"]);
     await execPhpCrossDecode([...phpArguments, "--verify"]);
     await execDartCrossDecode([...dartArguments, "--verify"]);
+    await execKotlinCrossDecode([...kotlinArguments, "--verify"]);
     process.stdout.write(`Cross-decode passed: ${caseIDs.join(", ")}\n`);
   } finally {
     await rm(workDir, { recursive: true, force: true });

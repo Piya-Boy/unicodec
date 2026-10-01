@@ -6,6 +6,7 @@ fun main() {
     PlainVectorsTest.register()
     EncryptedVectorsTest.register()
     StreamingTest.register()
+    ConformanceTest.register()
     val success = TestRunner.runAll()
     if (!success) {
         kotlin.system.exitProcess(1)

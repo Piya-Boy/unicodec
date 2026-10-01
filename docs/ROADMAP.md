@@ -160,6 +160,48 @@ decoder, verify, inspect.
       bound. No format or crypto algorithm change from the already-reviewed encrypted-path
       task.)
       Maker/Checker/Human gate: Claude
+- [x] Kotlin conformance + cross-decode: run all shared vectors (positive byte-exact,
+      negative with exact error ids); decode Go/Node/Python/Rust/Java/.NET/PHP/Dart
+      containers and vice versa. Goal: 100% vector pass; cross-decode
+      Go↔Node↔Python↔Rust↔Java↔.NET↔PHP↔Dart↔Kotlin green.
+      (solo maker+checker+human-gate 2026-10-02. Added a manifest-driven `ConformanceTest`
+      walking every vector in spec/vectors/vectors.json — all 12 positive, all 25 negative —
+      backed by a `MiniJson` reader ported directly from the Java port's hand-rolled parser
+      (Kotlin/JVM has no JSON in the bare JDK either, same reasoning as Java: test/tooling-
+      only code, not worth a dependency). `Vector.decode()` auto-detects plain vs encrypted
+      from the container's own header bytes, matching Go's single `DecodeBytes` dispatcher
+      — applied from the start instead of rediscovering the key-less-negative-vector
+      pitfall the Java port hit first. Added a `CrossDecode` CLI under `src/tools/kotlin/`
+      (`--vectors --work --cases --write|--verify`, same contract as every other SDK's
+      CLI), compiled alongside the test sources via a new `build-crossdecode.ps1` so it can
+      reuse `VectorManifest`/`MiniJson` without duplicating them. Wired Kotlin in as the
+      ninth cross-decode producer: `--kotlin` flag in tools/crossdecode/main.go, `"kotlin"`
+      added to cross-decode-python.py's producer loop, and scripts/cross-decode.mjs now
+      builds the CrossDecode jar and invokes it — hit the exact same `.bat`-can't-spawn-
+      directly issue the Maven/.NET/Dart wrappers already hit in this same file
+      (`kotlinc.bat` on Windows), fixed the same way: route through `cmd.exe /c`. Since
+      there's no system kotlinc on this machine, `KOTLINC`/`JAVA_EXE` env vars must point
+      at the scratchpad-extracted toolchain explicitly — documented as a real environment
+      dependency of this script, not silently assumed to resolve via PATH the way the
+      other eight producers do. `node scripts/cross-decode.mjs` passes for all 12 positive
+      vectors, 9-way byte-identical across
+      Go/Node/Python/Rust/Java/.NET/PHP/Dart/Kotlin. Gates green: hand-written `TestRunner`
+      (46 tests: the new ConformanceTest plus every earlier suite), `kotlinc` compiles
+      clean, `go build/vet/test ./...` clean, Python 22/22, Node 55/55. SECURITY (manual):
+      the CLI's `safeChild` resolves to a canonical path and appends a separator before the
+      containment check, same pattern as every other SDK's CLI; case IDs validated against
+      the same `^[a-z0-9]+(-[a-z0-9]+)*$` pattern used everywhere else; the
+      `kotlinc`/`cmd.exe`/`java` subprocesses are all invoked with argv arrays, never a
+      shell-interpolated string. No format or crypto change — this task adds only
+      test/tooling code.)
+      Maker/Checker/Human gate: Claude
+
+Future SDKs — Kotlin: MET 2026-10-02 — sdk/kotlin passes 100% of shared vectors
+byte-exact, rejects negatives with exact error ids, cross-decodes with
+Go/Node/Python/Rust/Java/.NET/PHP/Dart, JVM-interop crypto only (java.security/
+javax.crypto, the same stdlib-equivalent primitives as the Java SDK — no third-party
+runtime dependency, unlike Dart which needed one), public API equivalent to the other
+SDKs (one-shot plain/encrypted, streaming encoder/decoder, verify, inspect).
 
 ---
 
@@ -960,7 +1002,7 @@ priority order. Kotlin's kotlinc was subsequently obtained 2026-10-02 as a stand
 release zip (no system install) after a `choco install` attempt failed not-elevated.
 
 - [x] Dart
-- [~] Kotlin — in progress (see Active work above)
+- [x] Kotlin
 - [ ] Swift
 - [ ] Ruby
 
