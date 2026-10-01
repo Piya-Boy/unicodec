@@ -68,15 +68,26 @@ SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, 
       output vs shared vectors, and fail-closed decode. lib.rs re-exports the streaming API;
       crypto.rs only widened internals to pub(crate) — no format or crypto change.)
       Maker: gpt-5.6-terra · Checker: gpt-5.6-sol · Human gate: Claude
-- [ ] Rust conformance + cross-decode: run all shared vectors (positive byte-exact,
+- [x] Rust conformance + cross-decode: run all shared vectors (positive byte-exact,
       negative with exact error ids); decode Go/Node/Python containers and vice versa.
       Goal: 100% vector pass; cross-decode Go↔Node↔Python↔Rust green. `cargo test`,
       `cargo clippy -- -D warnings`, `cargo fmt --check` clean.
-      Maker: gpt-5.6-sol · Checker: gpt-5.6-sol (fresh context)
+      (maker + independent checker 2026-08-10: manifest-driven Rust conformance covers all
+      12 positive vectors byte-exact on encode and clean on decode, all 25 negatives return
+      their exact stable error ids, and every checked-in artifact matches its manifest SHA-256.
+      Fresh Go/Node/Python/Rust containers cross-decode in every direction for all 12 positive
+      vectors. Gates green: cargo test --all-targets (25), cargo clippy --all-targets --
+      -D warnings, cargo fmt --check, Go vector check/test/vet, Node tests (55), Python tests
+      (22), independent CHECK `No issues`, and security review found no blocking issues.
+      Human gate 2026-10-01: Claude reran cargo test --all-targets (25 passed), cargo clippy
+      --all-targets -- -D warnings (clean), cargo fmt --check (clean), node
+      scripts/cross-decode.mjs (all 12 positive vectors, Go/Node/Python/Rust 4-way
+      cross-decode passed), go build/vet/test ./... (all green). No format or crypto change.)
+      Maker: gpt-5.6-sol · Checker: gpt-5.6-terra · Human gate: Claude
 
-Phase 3 (Rust) exit gate: sdk/rust passes 100% of shared vectors byte-exact, rejects
-negatives with exact error ids, cross-decodes with Go/Node/Python, RustCrypto crates only,
-no unsafe, clippy/fmt clean, public API equivalent to the other SDKs. Then stop for human
+Phase 3 (Rust) exit gate: MET 2026-10-01 — sdk/rust passes 100% of shared vectors byte-exact,
+rejects negatives with exact error ids, cross-decodes with Go/Node/Python, RustCrypto crates
+only, no unsafe, clippy/fmt clean, public API equivalent to the other SDKs. Stop for human
 review before the next SDK (Java).
 
 ---
@@ -113,7 +124,7 @@ Exit criteria: CLI usable end-to-end; verified against vectors.
 
 Port from frozen spec + shared vectors (mechanical once Phase 1 holds):
 - [x] Python
-- [ ] Rust
+- [x] Rust
 - [ ] Java
 - [ ] .NET
 - [ ] PHP

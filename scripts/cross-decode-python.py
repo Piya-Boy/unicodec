@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -14,16 +15,6 @@ PYTHON_SDK_ROOT = REPO_ROOT / "sdk" / "python"
 sys.path.insert(0, str(PYTHON_SDK_ROOT))
 
 from ubc import DecodeOptions, MetadataEntry, UbcError, decode_encrypted, decode_plain, encode_encrypted, encode_plain
-
-
-CASE_IDS = (
-    "plain-one-byte",
-    "plain-chunk-1m-plus-one",
-    "plain-metadata",
-    "encrypted-one-byte",
-    "encrypted-chunk-1m-plus-one",
-    "encrypted-metadata",
-)
 
 
 def main() -> None:
@@ -38,8 +29,8 @@ def main() -> None:
 
     vectors_root = _existing_directory(args.vectors, "vectors")
     work_dir = _existing_directory(args.work, "work")
-    case_ids = _parse_cases(args.cases)
     manifest = _read_manifest(vectors_root)
+    case_ids = _parse_cases(args.cases, manifest)
 
     if args.write:
         for case_id in case_ids:
@@ -51,7 +42,7 @@ def main() -> None:
     for case_id in case_ids:
         vector = manifest[case_id]
         expected = _encode_vector(vectors_root, vector)
-        for producer in ("go", "node", "python"):
+        for producer in ("go", "node", "python", "rust"):
             container = _safe_child(work_dir, f"{case_id}.{producer}.ubc").read_bytes()
             data, metadata = _decode_vector(container, vector)
             input_bytes = _safe_child(vectors_root, vector["input"]).read_bytes()
@@ -72,12 +63,14 @@ def _existing_directory(path: Path, label: str) -> Path:
     return resolved
 
 
-def _parse_cases(value: str) -> tuple[str, ...]:
+def _parse_cases(value: str, manifest: dict[str, dict[str, object]]) -> tuple[str, ...]:
     case_ids = tuple(value.split(","))
     if not case_ids or len(set(case_ids)) != len(case_ids):
         raise ValueError("cases must be a non-empty, duplicate-free list")
-    if any(case_id not in CASE_IDS for case_id in case_ids):
-        raise ValueError("cases include an unapproved shared cross-decode case")
+    if any(re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", case_id) is None for case_id in case_ids):
+        raise ValueError("cases include an unsafe vector id")
+    if any(case_id not in manifest or manifest[case_id].get("expectError") is not None for case_id in case_ids):
+        raise ValueError("cases must name positive shared vectors")
     return case_ids
 
 
@@ -87,8 +80,8 @@ def _read_manifest(vectors_root: Path) -> dict[str, dict[str, object]]:
     if not isinstance(vectors, list):
         raise ValueError("manifest vectors must be an array")
     by_id = {vector.get("id"): vector for vector in vectors if isinstance(vector, dict)}
-    if len(by_id) != len(vectors) or any(case_id not in by_id for case_id in CASE_IDS):
-        raise ValueError("manifest does not contain the approved shared cross-decode cases")
+    if len(by_id) != len(vectors):
+        raise ValueError("manifest vector ids must be present and unique")
     return by_id
 
 

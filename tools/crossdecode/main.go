@@ -15,15 +15,6 @@ import (
 	ubc "github.com/ubc/vectors/sdk/go"
 )
 
-var sharedCaseIDs = map[string]struct{}{
-	"plain-one-byte":              {},
-	"plain-chunk-1m-plus-one":     {},
-	"plain-metadata":              {},
-	"encrypted-one-byte":          {},
-	"encrypted-chunk-1m-plus-one": {},
-	"encrypted-metadata":          {},
-}
-
 type manifest struct {
 	Vectors []vector `json:"vectors"`
 }
@@ -52,17 +43,18 @@ func main() {
 	workDir := flag.String("work", "", "isolated cross-decode work directory")
 	casesValue := flag.String("cases", "", "comma-separated approved vector IDs")
 	python := flag.Bool("python", false, "also verify Python-produced containers")
+	rust := flag.Bool("rust", false, "also verify Rust-produced containers")
 	flag.Parse()
 
 	if flag.NArg() != 0 {
 		die("unexpected positional arguments")
 	}
-	if err := run(*vectorsRoot, *workDir, *casesValue, *python); err != nil {
+	if err := run(*vectorsRoot, *workDir, *casesValue, *python, *rust); err != nil {
 		die("cross-decode: %v", err)
 	}
 }
 
-func run(vectorsRoot, workDir, casesValue string, verifyPython bool) error {
+func run(vectorsRoot, workDir, casesValue string, verifyPython, verifyRust bool) error {
 	root, err := existingDirectory(vectorsRoot, "vectors")
 	if err != nil {
 		return err
@@ -88,7 +80,7 @@ func run(vectorsRoot, workDir, casesValue string, verifyPython bool) error {
 		if vector.ExpectError != nil {
 			return fmt.Errorf("negative vector case %q is not allowed", id)
 		}
-		if err := crossDecodeCase(root, work, vector, verifyPython); err != nil {
+		if err := crossDecodeCase(root, work, vector, verifyPython, verifyRust); err != nil {
 			return fmt.Errorf("%s: %w", id, err)
 		}
 	}
@@ -122,9 +114,6 @@ func parseCaseIDs(value string) ([]string, error) {
 	for _, id := range ids {
 		if !safeID(id) {
 			return nil, fmt.Errorf("unsafe case ID %q", id)
-		}
-		if _, ok := sharedCaseIDs[id]; !ok {
-			return nil, fmt.Errorf("case %q is not an approved shared cross-decode case", id)
 		}
 		if _, ok := seen[id]; ok {
 			return nil, fmt.Errorf("duplicate case ID %q", id)
@@ -173,7 +162,7 @@ func readManifest(root string) (map[string]vector, error) {
 	return vectors, nil
 }
 
-func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython bool) error {
+func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython, verifyRust bool) error {
 	if vector.Input == "" {
 		return fmt.Errorf("positive vector has no input")
 	}
@@ -205,63 +194,45 @@ func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython bo
 		return fmt.Errorf("write Go container: %w", err)
 	}
 
-	nodePath, err := safeChild(workDir, vector.ID+".node.ubc")
-	if err != nil {
-		return err
-	}
-	nodeFresh, err := os.ReadFile(nodePath)
-	if err != nil {
-		return fmt.Errorf("read Node container: %w", err)
-	}
-	decoder, err := ubc.NewDecoder(bytes.NewReader(nodeFresh), ubc.DecodeOptions{Key: key})
-	if err != nil {
-		return fmt.Errorf("decode Node container: %w", err)
-	}
-	decoded, err := io.ReadAll(decoder)
-	if err != nil {
-		return fmt.Errorf("read Node container: %w", err)
-	}
-	if !bytes.Equal(decoded, input) {
-		return fmt.Errorf("Node-decoded plaintext differs from manifest input")
-	}
-	if !equalMetadata(decoder.Metadata(), entries) {
-		return fmt.Errorf("Node-decoded metadata differs from manifest metadata")
-	}
-	goReencoded, err := encodeFresh(decoded, decoder.Metadata(), vector.Options.ChunkSize, key, nonce, encrypted)
-	if err != nil {
-		return fmt.Errorf("Go re-encode: %w", err)
-	}
-	if !bytes.Equal(goReencoded, goFresh) {
-		return fmt.Errorf("Go re-encode is not byte-identical")
-	}
-	if !bytes.Equal(goFresh, nodeFresh) {
-		return fmt.Errorf("fresh Go and Node containers differ")
-	}
+	producers := []string{"node"}
 	if verifyPython {
-		pythonPath, err := safeChild(workDir, vector.ID+".python.ubc")
+		producers = append(producers, "python")
+	}
+	if verifyRust {
+		producers = append(producers, "rust")
+	}
+	for _, producer := range producers {
+		containerPath, err := safeChild(workDir, vector.ID+"."+producer+".ubc")
 		if err != nil {
 			return err
 		}
-		pythonFresh, err := os.ReadFile(pythonPath)
+		container, err := os.ReadFile(containerPath)
 		if err != nil {
-			return fmt.Errorf("read Python container: %w", err)
+			return fmt.Errorf("read %s container: %w", producer, err)
 		}
-		decoder, err := ubc.NewDecoder(bytes.NewReader(pythonFresh), ubc.DecodeOptions{Key: key})
+		decoder, err := ubc.NewDecoder(bytes.NewReader(container), ubc.DecodeOptions{Key: key})
 		if err != nil {
-			return fmt.Errorf("decode Python container: %w", err)
+			return fmt.Errorf("decode %s container: %w", producer, err)
 		}
 		decoded, err := io.ReadAll(decoder)
 		if err != nil {
-			return fmt.Errorf("read Python container: %w", err)
+			return fmt.Errorf("read %s container: %w", producer, err)
 		}
 		if !bytes.Equal(decoded, input) {
-			return fmt.Errorf("Python-decoded plaintext differs from manifest input")
+			return fmt.Errorf("%s-decoded plaintext differs from manifest input", producer)
 		}
 		if !equalMetadata(decoder.Metadata(), entries) {
-			return fmt.Errorf("Python-decoded metadata differs from manifest metadata")
+			return fmt.Errorf("%s-decoded metadata differs from manifest metadata", producer)
 		}
-		if !bytes.Equal(goFresh, pythonFresh) {
-			return fmt.Errorf("fresh Go and Python containers differ")
+		goReencoded, err := encodeFresh(decoded, decoder.Metadata(), vector.Options.ChunkSize, key, nonce, encrypted)
+		if err != nil {
+			return fmt.Errorf("Go re-encode from %s: %w", producer, err)
+		}
+		if !bytes.Equal(goReencoded, goFresh) {
+			return fmt.Errorf("%s-to-Go re-encode is not byte-identical", producer)
+		}
+		if !bytes.Equal(goFresh, container) {
+			return fmt.Errorf("fresh Go and %s containers differ", producer)
 		}
 	}
 	return nil
