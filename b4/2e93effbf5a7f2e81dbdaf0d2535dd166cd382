@@ -1,0 +1,49 @@
+sdk/kotlin/src/test/kotlin/dev/ubc/support/VectorManifest.kt
+  s_71b5d6711856d1::t_7e73a64925bba3 1-127
+sdk/kotlin/src/test/kotlin/dev/ubc/RunTests.kt
+  s_71b5d6711856d1::t_70b28408029436 9
+sdk/kotlin/src/test/kotlin/dev/ubc/support/MiniJson.kt
+  s_71b5d6711856d1::t_22d94bae18455a 1-181
+sdk/kotlin/src/tools/kotlin/dev/ubc/CrossDecode.kt
+  s_71b5d6711856d1::t_3b0034600e9c46 51
+  s_71b5d6711856d1::t_63acd1ac81d3ac 1-38,41-50,52-54,56-151
+  s_71b5d6711856d1::t_4cf240ea688535 39-40
+  s_71b5d6711856d1::t_b6b3288cdd322b 55
+scripts/cross-decode-python.py
+  s_71b5d6711856d1::t_5f5fdef90a4d0d 45
+sdk/kotlin/src/test/kotlin/dev/ubc/ConformanceTest.kt
+  s_71b5d6711856d1::t_7ce1efde75bdcd 1-57
+sdk/kotlin/build-crossdecode.ps1
+  s_71b5d6711856d1::t_afd17eb31a67c5 1-15
+tools/crossdecode/main.go
+  s_71b5d6711856d1::t_641e94db5bb480 51,57
+  s_71b5d6711856d1::t_9611bbcc70c3a3 170
+  s_71b5d6711856d1::t_adaab9fe51afec 62
+  s_71b5d6711856d1::t_a0c76762a8c2b9 221-223
+  s_71b5d6711856d1::t_93ef28479aed22 88
+scripts/cross-decode.mjs
+  s_71b5d6711856d1::t_f57de9fc631950 65-70
+  s_71b5d6711856d1::t_52e71466949af5 56-64,71-77
+  s_71b5d6711856d1::t_107aa85238bd16 226,234
+  s_71b5d6711856d1::t_957cbe04f40756 185,193,209-210,218
+  s_71b5d6711856d1::t_62d167a2f7e755 168-170
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_9c2d7796d2dee6 163-204
+  s_71b5d6711856d1::t_d5b809f1b8f965 1005
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b42e93effbf5a7f2e81dbdaf0d2535dd166cd382",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
