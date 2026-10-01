@@ -50,10 +50,26 @@ byte array field. Keep the public API equivalent to the other SDKs: encode/decod
       no sign-bit edge cases to special-case, unlike the Java port's `long`-based
       workarounds. No format or crypto change — scaffold only, no crypto code yet.)
       Maker/Checker/Human gate: Claude
-
-Phase 3 (.NET) in progress — continuing immediately per explicit "keep going" instruction
-(goal: ทำต่อให้เสร็จ), same task sequence as Rust/Java: plain path, encrypted path,
-streaming, conformance + cross-decode.
+- [x] .NET plain path: chunking + SHA-256 flat root; one-shot encode/decode.
+      Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
+      (solo maker+checker+human-gate 2026-10-01. `Payload.EncodePlain`/`DecodePlain` added
+      using `System.Security.Cryptography.SHA256`'s incremental `TransformBlock`/
+      `TransformFinalBlock` API, stdlib only. 26/26 xUnit tests pass (19 carried forward +
+      7 new): all 6 plain vectors (empty, one-byte, chunk-1m, chunk-1m-plus-one, multi-3m,
+      metadata) encode byte-exact and decode back to their exact input bytes; a flipped
+      payload byte returns ERR_ROOT_MISMATCH; negative-truncated/root-mismatch/trailing-
+      data/oversized-clen vectors return their exact stable error ids. `dotnet test` clean,
+      `TreatWarningsAsErrors` clean. CHECK: reader precedence (header → metadata →
+      missing-key → payload framing/truncated-footer → root mismatch → trailing-data)
+      matches SPEC.md §5 exactly, same order as every other SDK. SECURITY (manual):
+      `chunkLength > opts.MaxChunkLen` is checked before `container.Slice(offset,
+      (int)chunkLength)` ever runs, so the DoS cap bounds the slice before any copy;
+      `CryptographicOperations.FixedTimeEquals` used for the root comparison (constant-
+      time, the correct .NET primitive for this — not a hand-rolled compare); `ulong`
+      arithmetic throughout means no analog of the Java port's chunk_size-above-
+      Integer.MAX_VALUE stride-wrapping class of bug is even possible here. No format or
+      crypto algorithm change.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
