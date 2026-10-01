@@ -44,3 +44,7 @@ __pycache__/
 # Java
 /sdk/java/target/
 /sdk/java/.mvn/wrapper/maven-wrapper.jar
+
+# .NET
+/sdk/dotnet/**/bin/
+/sdk/dotnet/**/obj/

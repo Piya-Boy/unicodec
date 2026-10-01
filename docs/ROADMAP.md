@@ -11,20 +11,64 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-**Phase 3 — Java SDK.** Port the frozen format to `sdk/java/` (a Maven module `dev.ubc:ubc`,
-built via the vendored Maven Wrapper — `./mvnw` / `mvnw.cmd`, no system Maven install
-required). The Go SDK, Python SDK, Rust SDK, and shared vectors in spec/vectors are the
-contract — the port must match byte-for-byte and cross-decode with Go/Node/Python/Rust.
-Crypto from the JDK's own `javax.crypto`/`java.security` (JCA/JCE: `MessageDigest`,
-`Mac`, `Cipher` with `AES/GCM/NoPadding`) — stdlib only, zero third-party runtime
-dependencies, matching every other SDK. No format change. `chunk_count`/`total_size` are
-true uint64: store as Java `long` and treat every bit pattern (including a set sign bit)
-as valid — never reject on `< 0`, never compare with signed `<`/`>` near 2^63 without
-`Long.compareUnsigned`. Idiomatic Java: unchecked `UbcException` carrying a stable
-`ErrorCode` enum (mirrors Go's sentinel-error / Python's exception ergonomics — no
-`throws` clutter on every call); no `Unsafe`; defensive copies on any mutable array
-field. Keep the public API equivalent to the other SDKs: encode/decode (one-shot),
-streaming encoder/decoder (`InputStream`/`OutputStream`), verify, inspect.
+**Phase 3 — .NET SDK.** Port the frozen format to `sdk/dotnet/` (a class library `Ubc`,
+targeting `net8.0` LTS, with a `Ubc.sln` tying the library and its xUnit test project
+together — `dotnet build`/`dotnet test` from `sdk/dotnet/`). The Go SDK, Python SDK, Rust
+SDK, Java SDK, and shared vectors in spec/vectors are the contract — the port must match
+byte-for-byte and cross-decode with Go/Node/Python/Rust/Java. Crypto from
+`System.Security.Cryptography` (`SHA256`, `HMACSHA256`, `AesGcm`) — stdlib only, zero
+third-party runtime dependencies (xUnit/test-SDK are test-scope only, never packaged).
+No format change. `chunk_count`/`total_size` are true uint64: use `ulong` throughout —
+.NET's `ulong` is natively unsigned, so ordinary `<`/`>`/`==` operators are already
+correct; none of Java's `Long.compareUnsigned` defensive pattern is needed or should be
+ported verbatim. Idiomatic .NET: `UbcException : Exception` carrying a stable `ErrorCode`
+enum plus a `ToStableId()` extension method mapping it to the cross-SDK identifier string
+(e.g. `ERR_BAD_MAGIC`) for the conformance test and cross-decode tooling; no `unsafe`;
+`Span<byte>`/`ReadOnlySpan<byte>` for zero-copy parsing; defensive copies on any mutable
+byte array field. Keep the public API equivalent to the other SDKs: encode/decode
+(one-shot), streaming encoder/decoder (`Stream`), verify, inspect.
+
+- [x] .NET scaffold: `sdk/dotnet/` class library `Ubc` (net8.0) with `Ubc.sln`,
+      `ErrorCode` enum + `ToStableId()` mapping every stable error id (SPEC.md §5),
+      `UbcException`, header + TLV encode/parse. Goal: header/TLV round-trip; matches the
+      header/metadata bytes in the shared vectors.
+      (solo maker+checker+human-gate 2026-10-01, continuing without the human-review pause
+      used after Rust/Java per explicit instruction to keep going. dotnet SDK 10.0.400 and
+      runtime already present; targeted net8.0 LTS instead of net10.0 for consumer
+      compatibility per explicit confirmation. 19/19 xUnit tests pass (Theory cases count
+      individually, same coverage as Java's 6 JUnit methods): all positive vectors' headers
+      round-trip byte-exact, plain-metadata TLV round-trips byte-exact, 9 header/metadata
+      negative vectors return their exact stable error ids, metadata encoder sorts tags and
+      rejects duplicates, metadata length cap is checked before copying entries. `dotnet
+      build`/`dotnet test` clean with `TreatWarningsAsErrors=true` (the .NET analyzer
+      equivalent of clippy -D warnings) — caught and fixed one real finding before green:
+      CA2014 flagged a `stackalloc` inside a `foreach` loop in `Metadata.Encode` as a
+      potential stack-overflow risk on large metadata entry counts; moved the 6-byte TLV
+      entry-header buffer outside the loop so a single stack slot is reused across
+      iterations instead of allocating one per entry. CHECK: SPEC.md's true-uint64
+      chunk_count/total_size fields map directly to .NET's natively-unsigned `ulong` with
+      no sign-bit edge cases to special-case, unlike the Java port's `long`-based
+      workarounds. No format or crypto change — scaffold only, no crypto code yet.)
+      Maker/Checker/Human gate: Claude
+
+Phase 3 (.NET) in progress — continuing immediately per explicit "keep going" instruction
+(goal: ทำต่อให้เสร็จ), same task sequence as Rust/Java: plain path, encrypted path,
+streaming, conformance + cross-decode.
+
+---
+
+## Completed: Phase 3 — Java SDK
+
+Port the frozen format to `sdk/java/` (a Maven module `dev.ubc:ubc`, built via the
+vendored Maven Wrapper — `./mvnw` / `mvnw.cmd`, no system Maven install required). The Go
+SDK, Python SDK, Rust SDK, and shared vectors in spec/vectors are the contract — the port
+matches byte-for-byte and cross-decodes with Go/Node/Python/Rust. Crypto from the JDK's
+own `javax.crypto`/`java.security` (JCA/JCE: `MessageDigest`, `Mac`, `Cipher` with
+`AES/GCM/NoPadding`) — stdlib only, zero third-party runtime dependencies. `chunk_count`/
+`total_size` are true uint64: stored as Java `long`, every bit pattern (including a set
+sign bit) treated as valid — `Long.compareUnsigned` used throughout instead of signed
+`<`/`>`. Unchecked `UbcException` carrying a stable `ErrorCode` enum; no `Unsafe`;
+defensive copies on any mutable array field.
 
 - [x] Java scaffold: `sdk/java/` Maven module (`dev.ubc:ubc`) with vendored `mvnw`/
       `mvnw.cmd` wrapper (Apache Maven Wrapper 3.3.2, `only-script` distribution, no
