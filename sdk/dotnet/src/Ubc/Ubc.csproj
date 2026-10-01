@@ -15,4 +15,10 @@
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Exposes internal members (e.g. Crypto.RootKeyForTesting) to the conformance test
+         project only, mirroring the Java port's package-private test-visibility pattern. -->
+    <InternalsVisibleTo Include="Ubc.Tests" />
+  </ItemGroup>
+
 </Project>

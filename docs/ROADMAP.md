@@ -70,6 +70,38 @@ byte array field. Keep the public API equivalent to the other SDKs: encode/decod
       Integer.MAX_VALUE stride-wrapping class of bug is even possible here. No format or
       crypto algorithm change.)
       Maker/Checker/Human gate: Claude
+- [x] .NET encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+      sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
+      Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
+      plaintext on failure. CRYPTO-CRITICAL.
+      (solo maker+checker+human-gate 2026-10-01. `Crypto.EncodeEncrypted`/
+      `EncodeEncryptedWithFixedNonce`/`DecodeEncrypted` added using `System.Security.
+      Cryptography.AesGcm` and `HMACSHA256`, stdlib only. Before trusting the AEAD's
+      fail-closed behavior, wrote and ran a disposable console program exercising
+      `AesGcm.Decrypt` with a deliberately flipped tag: confirmed it throws
+      `AuthenticationTagMismatchException` (a `CryptographicException` subtype) AND actively
+      zeroes the output buffer rather than leaving partial/garbage plaintext — stronger than
+      just "doesn't return" plaintext on failure. 37/37 xUnit tests pass (26 carried forward
+      + 11 new): all 6 encrypted vectors encode byte-exact and decode back to exact input;
+      the HKDF `root_key` derivation matches spec/vectors.json's standalone
+      `cryptoKnownAnswers[0]` fixture independent of any container; negative-chunk-auth/
+      encrypted-short-clen/encrypted-metadata-tamper return ERR_CHUNK_AUTH;
+      negative-missing-key/encrypted-cap-missing-key (decoded with no key) return
+      ERR_MISSING_KEY; negative-encrypted-empty-wrong-key (decoded with the vector's own
+      wrong key) returns ERR_ROOT_MISMATCH; a wrong key against a non-empty container
+      returns ERR_CHUNK_AUTH. `dotnet test` clean, `TreatWarningsAsErrors` clean. CHECK:
+      nonce = base_nonce XOR le96(i), AAD = header_bytes ‖ SHA-256(meta_region) ‖ le64(i),
+      PRK = HMAC-SHA-256(base_nonce, key), root_key = HMAC-SHA-256(PRK, "UBC1 root
+      authentication" ‖ 0x01) all match spec exactly and both directions derive identically
+      (known-answer test proves the derivation itself, not just self-consistency).
+      SECURITY (manual): `RandomNumberGenerator.Fill` (CSPRNG) generates `EncodeEncrypted`'s
+      base_nonce, never reused across containers; `CryptographicOperations.FixedTimeEquals`
+      used for the root comparison; `clen < CryptoInternal.GcmTagSize` rejected as
+      ERR_CHUNK_AUTH before any decrypt attempt; reader precedence matches SPEC.md §5;
+      `Header.BaseNonce()` already returns a defensive copy (scaffold task) so the per-chunk
+      XOR nonce can't be corrupted by external mutation. No format change; crypto matches
+      SPEC.md §3-4 exactly.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
