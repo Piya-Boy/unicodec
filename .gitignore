@@ -40,3 +40,7 @@ __pycache__/
 # Rust
 /sdk/rust/target/
 /sdk/rust/Cargo.lock
+
+# Java
+/sdk/java/target/
+/sdk/java/.mvn/wrapper/maven-wrapper.jar

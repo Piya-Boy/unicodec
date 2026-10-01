@@ -11,14 +11,54 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-**Phase 3 — Rust SDK.** Port the frozen format to `sdk/rust/` (a Cargo crate `ubc`). The
-Go SDK, Python SDK, and shared vectors in spec/vectors are the contract — the port must
-match byte-for-byte and cross-decode with Go/Node/Python. Crypto from well-vetted crates:
-`sha2`, `hmac`, `hkdf`, and `aes-gcm` (RustCrypto) — no custom crypto. No format change.
-Use `u64` for chunk_count/total_size, little-endian throughout. Idiomatic Rust: return
-`Result<_, UbcError>` with an error enum mapping every stable error id; no `unwrap` on
-untrusted input; `#![forbid(unsafe_code)]`. Keep the public API equivalent to the other
-SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, inspect.
+**Phase 3 — Java SDK.** Port the frozen format to `sdk/java/` (a Maven module `dev.ubc:ubc`,
+built via the vendored Maven Wrapper — `./mvnw` / `mvnw.cmd`, no system Maven install
+required). The Go SDK, Python SDK, Rust SDK, and shared vectors in spec/vectors are the
+contract — the port must match byte-for-byte and cross-decode with Go/Node/Python/Rust.
+Crypto from the JDK's own `javax.crypto`/`java.security` (JCA/JCE: `MessageDigest`,
+`Mac`, `Cipher` with `AES/GCM/NoPadding`) — stdlib only, zero third-party runtime
+dependencies, matching every other SDK. No format change. `chunk_count`/`total_size` are
+true uint64: store as Java `long` and treat every bit pattern (including a set sign bit)
+as valid — never reject on `< 0`, never compare with signed `<`/`>` near 2^63 without
+`Long.compareUnsigned`. Idiomatic Java: unchecked `UbcException` carrying a stable
+`ErrorCode` enum (mirrors Go's sentinel-error / Python's exception ergonomics — no
+`throws` clutter on every call); no `Unsafe`; defensive copies on any mutable array
+field. Keep the public API equivalent to the other SDKs: encode/decode (one-shot),
+streaming encoder/decoder (`InputStream`/`OutputStream`), verify, inspect.
+
+- [x] Java scaffold: `sdk/java/` Maven module (`dev.ubc:ubc`) with vendored `mvnw`/
+      `mvnw.cmd` wrapper (Apache Maven Wrapper 3.3.2, `only-script` distribution, no
+      system Maven install, no jar — bootstraps real Maven 3.9.9 on first run), `ErrorCode`
+      enum mapping every stable error id (SPEC.md §5), `UbcException`, header + TLV
+      encode/parse. Goal: header/TLV round-trip; matches the header/metadata bytes in the
+      shared vectors.
+      (solo maker+checker+human-gate 2026-10-01 — no second Codex model available this
+      session, so TEST/CHECK/SECURITY all run by Claude against SPEC.md directly, same
+      rigor as the Rust human gate. 6/6 JUnit tests pass: all positive vectors' headers
+      round-trip byte-exact, plain-metadata TLV round-trips byte-exact, 9 header/metadata
+      negative vectors return their exact stable error ids, metadata encoder sorts tags
+      and rejects duplicates, metadata length cap is checked before copying entries.
+      `mvnw test` clean, `-Xlint:all -Werror` clean. SECURITY (codex review --uncommitted):
+      found and fixed two real issues — (1) mvnw.cmd had USE_MVND/default branches for
+      MVNW_REPOURL mirror-path rewriting swapped (vendored file bug, only triggers under
+      an enterprise Maven mirror override, fixed to match the correct mvnw/bash version);
+      (2) Header's base_nonce byte array was stored and exposed by reference, letting a
+      caller mutate a validated header after construction and break the
+      plain-mode-nonce-must-be-zero invariant — fixed with defensive copies in the
+      constructor and a cloning accessor, field made private. Retested clean after fixes.
+      No crypto/format code yet — JCA wiring starts next task (plain path).)
+      Maker/Checker/Human gate: Claude
+
+---
+
+## Completed: Phase 3 — Rust SDK
+
+Port the frozen format to `sdk/rust/` (a Cargo crate `ubc`). The Go SDK, Python SDK, and
+shared vectors in spec/vectors are the contract — the port matches byte-for-byte and
+cross-decodes with Go/Node/Python. Crypto from well-vetted crates: `sha2`, `hmac`, `hkdf`,
+and `aes-gcm` (RustCrypto) — no custom crypto. `u64` for chunk_count/total_size,
+little-endian throughout. `Result<_, UbcError>` with an error enum mapping every stable
+error id; no `unwrap` on untrusted input; `#![forbid(unsafe_code)]`.
 
 - [x] Rust scaffold: `sdk/rust/` cargo crate, `UbcError` enum mapping every stable error id
       (SPEC.md §5), header + TLV encode/parse. Goal: header/TLV round-trip; matches the
@@ -87,8 +127,7 @@ SDKs: encode/decode (one-shot), streaming encoder/decoder (Read/Write), verify, 
 
 Phase 3 (Rust) exit gate: MET 2026-10-01 — sdk/rust passes 100% of shared vectors byte-exact,
 rejects negatives with exact error ids, cross-decodes with Go/Node/Python, RustCrypto crates
-only, no unsafe, clippy/fmt clean, public API equivalent to the other SDKs. Stop for human
-review before the next SDK (Java).
+only, no unsafe, clippy/fmt clean, public API equivalent to the other SDKs.
 
 ---
 
