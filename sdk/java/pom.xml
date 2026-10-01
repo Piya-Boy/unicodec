@@ -45,6 +45,29 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.2.5</version>
       </plugin>
+      <plugin>
+        <!--
+          Build-time only: drives dev.ubc.support.CrossDecodeCli from the compiled test
+          classpath for scripts/cross-decode.mjs (`mvn -q exec:java@cross-decode ...`).
+          Never packaged with the library jar; not a runtime dependency of the SDK.
+        -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>cross-decode</id>
+            <phase>none</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>dev.ubc.support.CrossDecodeCli</mainClass>
+              <classpathScope>test</classpathScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>

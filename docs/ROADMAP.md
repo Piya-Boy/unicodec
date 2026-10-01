@@ -150,6 +150,50 @@ streaming encoder/decoder (`InputStream`/`OutputStream`), verify, inspect.
       the decoder, matching the one-shot path's bound. No format or crypto algorithm change
       from the already-reviewed encrypted-path task.)
       Maker/Checker/Human gate: Claude
+- [x] Java conformance + cross-decode: run all shared vectors (positive byte-exact,
+      negative with exact error ids); decode Go/Node/Python/Rust containers and vice versa.
+      Goal: 100% vector pass; cross-decode Go↔Node↔Python↔Rust↔Java green.
+      (solo maker+checker+human-gate 2026-10-01. Added a manifest-driven `ConformanceTest`
+      (`src/test/java/dev/ubc/ConformanceTest.java`) that walks every vector in
+      spec/vectors/vectors.json — not a hand-picked subset like the earlier per-mode test
+      files — verifying the expected artifact's own SHA-256, byte-exact encode, decode
+      round-trip, and metadata for all 12 positive vectors, plus the exact stable error id
+      for all 25 negatives. Backing it: a hand-rolled, dependency-free `MiniJson` reader
+      (test-scope only, same choice the Rust port's test support already made for this same
+      file rather than add a JSON library) and a `VectorManifest` helper whose `decode()`
+      auto-detects plain vs encrypted from the container's own header bytes — matching Go's
+      single `DecodeBytes` dispatcher — instead of trusting the caller's guess, after an
+      early version that branched on key-presence misdecoded the two key-less negative
+      vectors (negative-missing-key, negative-encrypted-cap-missing-key are decoded with no
+      key on purpose; every other negative decodes with the vector's own or the canonical
+      key so a missing-key short-circuit can't mask the error the vector is meant to
+      exercise). Added `dev.ubc.support.CrossDecodeCli` (`--vectors --work --cases
+      --write|--verify`, same contract as the Rust example) wired into the build via the
+      `exec-maven-plugin` (build-time only, invoked as `mvnw -q exec:java@cross-decode`;
+      never packaged into the library jar, so this is not a new runtime dependency), and
+      wired Java as a fifth producer everywhere the other four already were: `--java` flag
+      in tools/crossdecode/main.go, `"java"` added to cross-decode-python.py's producer
+      loop, and scripts/cross-decode.mjs now runs `mvnw(.cmd)` (via `cmd.exe /c` on Windows
+      since Node's execFile cannot spawn a .cmd batch file directly — hit a `spawn EINVAL`
+      confirming this before the fix) to write and verify Java containers alongside the
+      other four. `node scripts/cross-decode.mjs` passes for all 12 positive vectors,
+      5-way byte-identical across Go/Node/Python/Rust/Java. Gates green: `mvnw test` (26
+      tests: the new ConformanceTest plus every earlier per-mode suite), `-Xlint:all
+      -Werror` clean, `go build/vet/test ./...` clean, Python 22/22, Node 55/55.
+      SECURITY (manual): CrossDecodeCli's `safeChild` resolves+normalizes then requires
+      `target.startsWith(root)` before any read/write, rejecting path traversal in manifest-
+      or CLI-supplied relative paths; case IDs are validated against the same
+      `[a-z0-9]+(-[a-z0-9]+)*` pattern used elsewhere before being joined into any argument
+      list; the Maven subprocess is invoked with an argv array (not a shell-interpolated
+      string), so no injection surface even though vectorsRoot/workDir/caseIDs ultimately
+      flow into a child-process command line. No format or crypto change — this task adds
+      only test/tooling code.)
+      Maker/Checker/Human gate: Claude
+
+Phase 3 (Java) exit gate: MET 2026-10-01 — sdk/java passes 100% of shared vectors
+byte-exact, rejects negatives with exact error ids, cross-decodes with Go/Node/Python/Rust,
+JCA/JCE stdlib only, public API equivalent to the other SDKs (one-shot plain/encrypted,
+streaming encoder/decoder, verify, inspect).
 
 ---
 
@@ -266,7 +310,7 @@ Exit criteria: CLI usable end-to-end; verified against vectors.
 Port from frozen spec + shared vectors (mechanical once Phase 1 holds):
 - [x] Python
 - [x] Rust
-- [ ] Java
+- [x] Java
 - [ ] .NET
 - [ ] PHP
 

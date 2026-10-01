@@ -44,17 +44,18 @@ func main() {
 	casesValue := flag.String("cases", "", "comma-separated approved vector IDs")
 	python := flag.Bool("python", false, "also verify Python-produced containers")
 	rust := flag.Bool("rust", false, "also verify Rust-produced containers")
+	java := flag.Bool("java", false, "also verify Java-produced containers")
 	flag.Parse()
 
 	if flag.NArg() != 0 {
 		die("unexpected positional arguments")
 	}
-	if err := run(*vectorsRoot, *workDir, *casesValue, *python, *rust); err != nil {
+	if err := run(*vectorsRoot, *workDir, *casesValue, *python, *rust, *java); err != nil {
 		die("cross-decode: %v", err)
 	}
 }
 
-func run(vectorsRoot, workDir, casesValue string, verifyPython, verifyRust bool) error {
+func run(vectorsRoot, workDir, casesValue string, verifyPython, verifyRust, verifyJava bool) error {
 	root, err := existingDirectory(vectorsRoot, "vectors")
 	if err != nil {
 		return err
@@ -80,7 +81,7 @@ func run(vectorsRoot, workDir, casesValue string, verifyPython, verifyRust bool)
 		if vector.ExpectError != nil {
 			return fmt.Errorf("negative vector case %q is not allowed", id)
 		}
-		if err := crossDecodeCase(root, work, vector, verifyPython, verifyRust); err != nil {
+		if err := crossDecodeCase(root, work, vector, verifyPython, verifyRust, verifyJava); err != nil {
 			return fmt.Errorf("%s: %w", id, err)
 		}
 	}
@@ -162,7 +163,7 @@ func readManifest(root string) (map[string]vector, error) {
 	return vectors, nil
 }
 
-func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython, verifyRust bool) error {
+func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython, verifyRust, verifyJava bool) error {
 	if vector.Input == "" {
 		return fmt.Errorf("positive vector has no input")
 	}
@@ -200,6 +201,9 @@ func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython, v
 	}
 	if verifyRust {
 		producers = append(producers, "rust")
+	}
+	if verifyJava {
+		producers = append(producers, "java")
 	}
 	for _, producer := range producers {
 		containerPath, err := safeChild(workDir, vector.ID+"."+producer+".ubc")
