@@ -60,6 +60,39 @@ an array of ints. Keep the public API equivalent to the other SDKs: encode/decod
       compare primitive, the correct choice here — not a hand-rolled `===`). No format or
       crypto algorithm change — scaffold + plain only, no AEAD code yet.)
       Maker/Checker/Human gate: Claude
+- [x] PHP encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+      sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
+      Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
+      plaintext on failure. CRYPTO-CRITICAL.
+      (solo maker+checker+human-gate 2026-10-01. `Crypto::encodeEncrypted`/
+      `encodeEncryptedWithFixedNonce`/`decodeEncrypted` added using `openssl_encrypt`/
+      `openssl_decrypt` with `aes-256-gcm` and `hash_hmac`/incremental `hash_init(...,
+      HASH_HMAC, ...)`, bundled ext-openssl/ext-hash only. Before trusting fail-closed
+      behavior, verified experimentally (not assumed) that `openssl_decrypt` returns the
+      boolean `false` — not an exception, not partial plaintext — on a tag mismatch; the
+      decrypt helper uses a strict `=== false` check specifically because a legitimately
+      empty-string plaintext is also falsy in PHP and a loose check would misclassify it as
+      an auth failure. Also independently verified the `root_key` derivation against
+      spec/vectors.json's standalone known-answer fixture via a one-off script before
+      writing any tests, since `hash_hmac(algo, data, key, raw)`'s data-before-key argument
+      order (opposite of most languages' hmac(key, data) convention) is an easy place to
+      transpose silently — confirmed byte-exact on the first attempt once the argument
+      order was worked out deliberately rather than guessed. 37/37 PHPUnit tests pass (26
+      carried forward + 11 new): all 6 encrypted vectors encode byte-exact and decode back
+      to exact input; the HKDF root_key derivation matches the shared known-answer fixture
+      independent of any container; negative-chunk-auth/encrypted-short-clen/encrypted-
+      metadata-tamper return ERR_CHUNK_AUTH; negative-missing-key/encrypted-cap-missing-key
+      (decoded with no key) return ERR_MISSING_KEY; negative-encrypted-empty-wrong-key
+      (decoded with the vector's own wrong key) returns ERR_ROOT_MISMATCH; a wrong key
+      against a non-empty container also returns ERR_CHUNK_AUTH. `vendor/bin/phpunit`
+      clean. CHECK: nonce = base_nonce XOR le96(i), AAD = header_bytes ‖ SHA-256(meta_region)
+      ‖ le64(i) match spec exactly; both encode and decode derive the root key identically.
+      SECURITY (manual): `random_bytes()` (CSPRNG, not `rand()`/`mt_rand()`) generates
+      `encodeEncrypted`'s base_nonce; `hash_equals()` used for the root comparison;
+      `clen < CryptoInternal::GCM_TAG_SIZE` rejected as ERR_CHUNK_AUTH before any decrypt
+      attempt; reader precedence matches SPEC.md §5. No format change; crypto matches
+      SPEC.md §3-4 exactly.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
