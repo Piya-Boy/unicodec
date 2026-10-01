@@ -1,0 +1,48 @@
+scripts/cross-decode.mjs
+  s_fe04875f64a5be::t_74377508313bc9 15-16,77-80,98-100,110,113,119-120,123,126,129
+sdk/rust/tests/conformance.rs
+  s_fe04875f64a5be::t_233375dd394f0f 1-38,40-53,56-89
+  s_fe04875f64a5be::t_c6a1905d575d5a 39
+  s_fe04875f64a5be::t_66742c0ec0750d 54-55
+sdk/rust/examples/cross_decode.rs
+  s_fe04875f64a5be::t_ae829078b9e69f 3-4,36-40,50-54
+  s_fe04875f64a5be::t_233375dd394f0f 1-2,5-7,11-35,41-49,56-70,75-157
+  s_fe04875f64a5be::t_2c2007fcdefdfa 55
+  s_fe04875f64a5be::t_66742c0ec0750d 8-10,71-74
+scripts/cross-decode-python.py
+  s_fe04875f64a5be::t_74377508313bc9 8,33,45,66,70-73,83-84
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_deb0c27f0bfd77 127
+  s_fe04875f64a5be::t_31ed77cf80c17f 87
+  s_71b5d6711856d1::t_6cbd3b164ac4a3 71,75-86,88-90
+sdk/rust/tests/support/mod.rs
+  s_fe04875f64a5be::t_66742c0ec0750d 198,223-226,232-235,342-345
+  s_fe04875f64a5be::t_233375dd394f0f 1-197,199-202,204-222,227-231,236-341,346-461
+  s_fe04875f64a5be::t_3ab9b77439d78b 203
+tools/crossdecode/main.go
+  s_fe04875f64a5be::t_74377508313bc9 46,52,57,83,165,197-199,201-202,204-205,209,211,213,215,219,222,225-232,234-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "94cb78d57538a39110923f99c7847a12bbb1af91",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    },
+    "s_fe04875f64a5be": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe822-e573-78b0-8f75-676540d6b12f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
