@@ -48,6 +48,26 @@ streaming encoder/decoder (`InputStream`/`OutputStream`), verify, inspect.
       constructor and a cloning accessor, field made private. Retested clean after fixes.
       No crypto/format code yet — JCA wiring starts next task (plain path).)
       Maker/Checker/Human gate: Claude
+- [x] Java plain path: chunking + SHA-256 flat root; one-shot encode/decode.
+      Goal: byte-exact to every plain vector; ERR_ROOT_MISMATCH on a flipped byte.
+      (solo maker+checker+human-gate 2026-10-01. `Payload.encodePlain`/`decodePlain` added
+      using `java.security.MessageDigest` (JCA SHA-256), stdlib only. 10/10 JUnit tests pass:
+      all 6 plain vectors (empty, one-byte, chunk-1m, chunk-1m-plus-one, multi-3m, metadata)
+      encode byte-exact and decode back to their exact input bytes; a flipped payload byte
+      returns ERR_ROOT_MISMATCH; negative-truncated/root-mismatch/trailing-data/oversized-clen
+      vectors return their exact stable error ids. `mvnw test` clean. CHECK: reader precedence
+      (header → metadata → missing-key → payload framing/truncated-footer → root mismatch →
+      trailing-data) matches SPEC.md §5 exactly. SECURITY: hostile self-review (codex CLI
+      review hit a `--uncommitted`+prompt argument conflict in the installed version and the
+      no-prompt retry produced no verdict after rerunning `mvnw test` itself — treated as
+      inconclusive, not a pass, so Claude did a full manual pass instead) — confirmed DoS
+      caps (`maxChunkLen`/`maxChunkCount`/`maxTotalSize`) are checked before any chunk bytes
+      are copied or hashed, `chunk_count`/`total_size` true-uint64 comparisons use
+      `Long.compareUnsigned` throughout (not signed `<`/`>`, which would mishandle a legal
+      value with the sign bit set), and the plain-mode chunking loop uses `long` stride/offset
+      arithmetic so a chunk_size above `Integer.MAX_VALUE` (legal for plain mode up to uint32
+      max) can't wrap a negative `int` stride. No format or crypto algorithm change.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
