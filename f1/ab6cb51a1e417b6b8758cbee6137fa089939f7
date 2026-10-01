@@ -1,0 +1,35 @@
+sdk/kotlin/src/main/kotlin/dev/ubc/Streaming.kt
+  s_71b5d6711856d1::t_09f47d20c82b85 1-87
+sdk/kotlin/src/main/kotlin/dev/ubc/Encoder.kt
+  s_71b5d6711856d1::t_7a6a4eec4f681d 1-151
+sdk/kotlin/src/test/kotlin/dev/ubc/StreamingTest.kt
+  s_71b5d6711856d1::t_1b0b80cba9d452 1-165
+sdk/kotlin/src/main/kotlin/dev/ubc/EncodeOptions.kt
+  s_71b5d6711856d1::t_24924c0e1ba820 1-33
+sdk/kotlin/src/main/kotlin/dev/ubc/VerifyReport.kt
+  s_71b5d6711856d1::t_1a030ff8a8e1e5 1-4
+sdk/kotlin/src/main/kotlin/dev/ubc/ContainerInfo.kt
+  s_71b5d6711856d1::t_ba69e1c9631cc7 1-14
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_c96510bd8c4b22 128-162
+sdk/kotlin/src/main/kotlin/dev/ubc/Decoder.kt
+  s_71b5d6711856d1::t_98f7058cf74264 1-208
+sdk/kotlin/src/test/kotlin/dev/ubc/RunTests.kt
+  s_71b5d6711856d1::t_fd72cafd569293 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f1ab6cb51a1e417b6b8758cbee6137fa089939f7",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
