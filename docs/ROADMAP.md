@@ -102,6 +102,51 @@ byte array field. Keep the public API equivalent to the other SDKs: encode/decod
       XOR nonce can't be corrupted by external mutation. No format change; crypto matches
       SPEC.md §3-4 exactly.)
       Maker/Checker/Human gate: Claude
+- [x] .NET streaming encoder/decoder (`Stream`) + verify + inspect; DoS caps on untrusted
+      lengths. Goal: streaming output identical to one-shot; fail-closed; caps enforced
+      before allocation. Constant-time compare for the encrypted root.
+      (solo maker+checker+human-gate 2026-10-01. Extracted shared nonce/AAD/root-key/GCM
+      primitives into internal `CryptoInternal` (and a `RootAccumulator` wrapping the
+      plain-SHA-256-vs-keyed-HMAC branch) before writing `Encoder`/`Decoder`, so the
+      one-shot and streaming paths share one implementation — same approach as the Java
+      port. Applied the same three Rust-derived fixes from the start (re-read that task's
+      full security history in this file before writing any code): (1) the encoder's chunk
+      buffer is `Math.Min(totalSize, chunkSize)`, not `chunkSize`; (2) the decoder
+      preflights the 36-byte footer before authenticating the final encrypted chunk, so
+      ERR_TRUNCATED wins over ERR_CHUNK_AUTH per SPEC.md §5; (3) the encoder's plaintext
+      spool file is deleted immediately after a successful finish (try/finally). .NET has
+      no deterministic destructor, so added a safety net the Java port's JVM-level
+      `deleteOnExit()` doesn't need an equivalent for elsewhere: a finalizer on `Encoder`
+      that best-effort-deletes the spool file if a caller never disposes it, with
+      `GC.SuppressFinalize` on the normal dispose path so the finalizer only runs in the
+      abandoned-encoder case. The spool file itself is created with
+      `FileStreamOptions.UnixCreateMode = UserRead|UserWrite` on non-Windows (owner-only
+      permissions set atomically at creation, no window of default permissions); gated
+      behind `OperatingSystem.IsWindows()` because the analyzer (CA1416) correctly flags
+      that property as unsupported on Windows — gating was the fix, not suppressing the
+      warning. 45/45 xUnit tests pass (37 carried forward + 8 new): streamed plain output
+      is byte-exact vs the one-shot plain-multi-3m vector even written in two unequal
+      chunks, and decodes correctly through a deliberately pathological `Stream` that only
+      ever returns 1 byte per `Read()` call; streamed encrypted output is byte-exact vs the
+      one-shot encrypted-chunk-1m-plus-one vector; a corrupted footer and a trailing extra
+      byte are both caught before the decoder returns 0 (root withheld until verified); the
+      truncated+corrupted-final-tag scenario returns ERR_TRUNCATED, not ERR_CHUNK_AUTH; an
+      encoder with a 256 MiB chunk_size against a 3-byte input round-trips without
+      over-allocating; a streaming decoder with max_chunk_len=4 against 1 MiB chunks throws
+      ERR_TRUNCATED on the first Read(); Verify() reports Ok=false with the correct error
+      code on a corrupted container and Inspect() reads only the header+metadata region,
+      unaffected by a mangled footer. `dotnet test` clean, `TreatWarningsAsErrors` clean
+      (including the CA1416 fix above). CHECK: confirmed (same finding as the Java port)
+      that Go's canonical `sdk/go/decoder.go` releases plain-mode chunks incrementally
+      per-read with no full-buffering spool, so .NET's `Decoder` was built unbuffered for
+      both modes to match that cross-SDK convention, not the more conservative buffered
+      approach Rust's streaming decoder initially used for plain mode. SECURITY (manual):
+      `Decoder` disposes its `RootAccumulator` (which wraps a disposable `HashAlgorithm` or
+      `HMAC`); chunk-length DoS caps checked before any `ReadExact` allocation, matching the
+      one-shot path's bound; the encoder's `FileShare.None` prevents another process from
+      opening the spool file concurrently while it's in use. No format or crypto algorithm
+      change from the already-reviewed encrypted-path task.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
