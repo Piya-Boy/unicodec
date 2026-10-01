@@ -1,0 +1,33 @@
+sdk/php/src/Decoder.php
+  s_71b5d6711856d1::t_d8adcd91a2b25e 1-212
+sdk/php/src/EncodeOptions.php
+  s_71b5d6711856d1::t_2218731b6c1e32 1-41
+sdk/php/tests/StreamingTest.php
+  s_71b5d6711856d1::t_a787a1d97869b3 1-190
+sdk/php/src/Encoder.php
+  s_71b5d6711856d1::t_ef461d60df40f0 1-144
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_a9423c99b2b8ce 96-133
+sdk/php/src/VerifyReport.php
+  s_71b5d6711856d1::t_e28d93e66ea1c5 1-15
+sdk/php/src/Streaming.php
+  s_71b5d6711856d1::t_673754f9d04337 1-95
+sdk/php/src/ContainerInfo.php
+  s_71b5d6711856d1::t_317adacd5c4c83 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "22c2e0c4034a0fcaf0ed2d37f96c9814e1511b28",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
