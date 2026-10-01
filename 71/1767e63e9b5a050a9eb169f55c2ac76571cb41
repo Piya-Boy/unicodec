@@ -1,0 +1,37 @@
+sdk/dart/test/streaming_test.dart
+  s_71b5d6711856d1::t_6d7f4a8488865a 1-161
+sdk/dart/lib/src/encode_options.dart
+  s_71b5d6711856d1::t_823f68d2f5efdc 1-36
+sdk/dart/lib/src/decoder.dart
+  s_71b5d6711856d1::t_ef4a93059e4948 17-27
+  s_71b5d6711856d1::t_cc2cdd84d21a2a 1-16,28-245
+sdk/dart/lib/src/container_info.dart
+  s_71b5d6711856d1::t_4879c2159e998e 1-26
+sdk/dart/lib/src/verify_report.dart
+  s_71b5d6711856d1::t_94dc7cdc9a6c15 1-9
+sdk/dart/lib/src/encoder.dart
+  s_71b5d6711856d1::t_90398a687a7066 1-168
+sdk/dart/lib/src/streaming.dart
+  s_71b5d6711856d1::t_118481f0595d9a 1-30,33-95
+  s_71b5d6711856d1::t_67ea578f786135 31-32
+sdk/dart/lib/ubc.dart
+  s_71b5d6711856d1::t_1265a107559396 4,8-10,16,18
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_bb4c03267f7565 122-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "711767e63e9b5a050a9eb169f55c2ac76571cb41",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
