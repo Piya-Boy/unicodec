@@ -5,6 +5,7 @@ fun main() {
     HeaderMetadataVectorsTest.register()
     PlainVectorsTest.register()
     EncryptedVectorsTest.register()
+    StreamingTest.register()
     val success = TestRunner.runAll()
     if (!success) {
         kotlin.system.exitProcess(1)

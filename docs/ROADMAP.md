@@ -125,6 +125,41 @@ decoder, verify, inspect.
       mutation. No format change; crypto matches SPEC.md §3-4 exactly, no deviation from
       the Java port it was ported from.)
       Maker/Checker/Human gate: Claude
+- [x] Kotlin streaming encoder/decoder (InputStream/OutputStream) + verify + inspect; DoS
+      caps on untrusted lengths. Goal: streaming output identical to one-shot; fail-closed;
+      caps enforced before allocation. Constant-time compare for the encrypted root.
+      (solo maker+checker+human-gate 2026-10-02. `Encoder`/`Decoder` are direct ports of
+      the Java SDK's already-security-reviewed streaming classes via JVM interop
+      (`java.io.OutputStream`/`InputStream`), applying every fix that port's three security
+      rounds found from the first draft instead of rediscovering any of them: (1) the
+      encoder's chunk buffer is `min(totalSize, chunkSize)`, not `chunkSize`; (2) the
+      decoder preflights the 36-byte footer before authenticating the final encrypted
+      chunk, so ERR_TRUNCATED wins over ERR_CHUNK_AUTH per SPEC.md §5; (3) the encoder's
+      plaintext spool file is created via `Files.createTempFile` with owner-only POSIX
+      permissions where supported (falling back to the platform default on non-POSIX
+      filesystems), `deleteOnExit()` registered as a safety net, and the spool deleted
+      immediately after a successful finish in a try/finally. 45/45 tests pass (37 carried
+      forward + 8 new): streamed plain output is byte-exact vs the one-shot plain-multi-3m
+      vector even written in two unequal chunks, and decodes correctly through a
+      deliberately pathological `InputStream` that only ever returns 1 byte per `read()`
+      call; streamed encrypted output is byte-exact vs the one-shot encrypted-chunk-1m-
+      plus-one vector; a corrupted footer and a trailing extra byte are both caught before
+      the decoder yields -1 (root withheld until verified); the truncated+corrupted-final-
+      tag scenario returns ERR_TRUNCATED, not ERR_CHUNK_AUTH; an encoder with a 256 MiB
+      chunk_size against a 3-byte input round-trips without the over-allocation bug; a
+      streaming decoder with max_chunk_len=4 against 1 MiB chunks throws ERR_TRUNCATED on
+      the first read(); verify() reports ok=false with the correct error code on a
+      corrupted container and inspect() reads only the header+metadata region, unaffected
+      by a mangled footer. `kotlinc` compiles clean. CHECK: confirmed (same finding as the
+      Java/.NET/PHP/Dart ports) that Go's canonical `sdk/go/decoder.go` releases plain-mode
+      chunks incrementally per-read with no full-buffering spool, so Kotlin's `Decoder` was
+      built unbuffered for both modes to match that cross-SDK convention from the start.
+      SECURITY (manual): the encoder's plaintext spool permissions/deleteOnExit/purge-on-
+      finish logic is byte-for-byte the already-reviewed Java approach; chunk-length DoS
+      caps checked before any allocation in the decoder, matching the one-shot path's
+      bound. No format or crypto algorithm change from the already-reviewed encrypted-path
+      task.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
