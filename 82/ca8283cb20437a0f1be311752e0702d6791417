@@ -1,0 +1,45 @@
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_52cd6c2fd6adb3 150-187
+  s_71b5d6711856d1::t_0ff78937d54130 489
+tools/crossdecode/main.go
+  s_71b5d6711856d1::t_7c292702eba1a1 209-211
+  s_71b5d6711856d1::t_df09bee9c97e97 48,54
+  s_71b5d6711856d1::t_ba264df315fa85 59
+  s_71b5d6711856d1::t_b1485f5b198354 85
+  s_71b5d6711856d1::t_94ced77ab75f3e 167
+sdk/dotnet/tests/Ubc.Tests/Support/VectorManifest.cs
+  s_71b5d6711856d1::t_2d4822994e48bc 1-179
+sdk/dotnet/tools/CrossDecode/Program.cs
+  s_71b5d6711856d1::t_94528dcd954ef1 1-212
+sdk/dotnet/tests/Ubc.Tests/Support/MiniJson.cs
+  s_71b5d6711856d1::t_c47b8c4bfb9d28 1-216
+scripts/cross-decode-python.py
+  s_71b5d6711856d1::t_5a29d1dbd99ba6 45
+scripts/cross-decode.mjs
+  s_71b5d6711856d1::t_96072c55157fc6 32-34
+  s_71b5d6711856d1::t_a45f1ac3392244 121-123
+  s_71b5d6711856d1::t_7279560759ad1f 20-21,31,35-36
+  s_71b5d6711856d1::t_5193338b75578c 135,140,150-151,156,161,166
+sdk/dotnet/tests/Ubc.Tests/ConformanceTests.cs
+  s_71b5d6711856d1::t_62d07a5ddf45dc 1-61
+sdk/dotnet/tools/CrossDecode/CrossDecode.csproj
+  s_71b5d6711856d1::t_098de6db1f9107 1-26
+sdk/dotnet/Ubc.slnx
+  s_71b5d6711856d1::t_b81c680696f922 8-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "82ca8283cb20437a0f1be311752e0702d6791417",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
