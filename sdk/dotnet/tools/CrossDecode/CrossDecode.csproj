@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Ubc.CrossDecode</RootNamespace>
+    <AssemblyName>CrossDecode</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Ubc\Ubc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shares the manifest reader with the test project instead of duplicating it, same
+         way the Rust port's cross_decode example links tests/support/mod.rs by path. -->
+    <Compile Include="..\..\tests\Ubc.Tests\Support\MiniJson.cs" Link="Support\MiniJson.cs" />
+    <Compile Include="..\..\tests\Ubc.Tests\Support\VectorManifest.cs" Link="Support\VectorManifest.cs" />
+  </ItemGroup>
+
+</Project>

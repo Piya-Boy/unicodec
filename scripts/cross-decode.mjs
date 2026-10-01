@@ -17,6 +17,8 @@ const rustManifest = resolve(repoRoot, "sdk", "rust", "Cargo.toml");
 const javaDir = resolve(repoRoot, "sdk", "java");
 const isWindows = process.platform === "win32";
 const mavenWrapper = resolve(javaDir, isWindows ? "mvnw.cmd" : "mvnw");
+const dotnetDir = resolve(repoRoot, "sdk", "dotnet");
+const dotnetCommand = process.env.DOTNET ?? "dotnet";
 
 function execMaven(mavenArgs) {
   // mvnw.cmd is a Windows batch file; Node's execFile cannot spawn it directly (EINVAL)
@@ -24,6 +26,12 @@ function execMaven(mavenArgs) {
   return isWindows
     ? execFile("cmd.exe", ["/c", mavenWrapper, ...mavenArgs], { cwd: javaDir })
     : execFile(mavenWrapper, mavenArgs, { cwd: javaDir });
+}
+
+function execCrossDecode(dotnetArgs) {
+  // No --no-build: like cargo run and mvn exec:java, this compiles on demand so the script
+  // has no separate "build sdk/dotnet first" prerequisite.
+  return execFile(dotnetCommand, ["run", "--project", "tools/CrossDecode", "--", ...dotnetArgs], { cwd: dotnetDir });
 }
 
 function safeId(value) {
@@ -110,7 +118,9 @@ async function main() {
     await execFile(cargoCommand, [...rustArguments, "--write"], { cwd: repoRoot });
     const javaExecArgs = `--vectors ${vectorsRoot} --work ${workDir} --cases ${caseIDs.join(",")}`;
     await execMaven(["-q", "exec:java@cross-decode", `-Dexec.args=${javaExecArgs} --write`]);
-    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java"], { cwd: repoRoot });
+    const dotnetArguments = ["--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")];
+    await execCrossDecode([...dotnetArguments, "--write"]);
+    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java", "--dotnet"], { cwd: repoRoot });
 
     for (const id of caseIDs) {
       const vector = byID.get(id);
@@ -122,10 +132,12 @@ async function main() {
       const pythonFresh = await readFile(safeChild(workDir, `${id}.python.ubc`));
       const rustFresh = await readFile(safeChild(workDir, `${id}.rust.ubc`));
       const javaFresh = await readFile(safeChild(workDir, `${id}.java.ubc`));
+      const dotnetFresh = await readFile(safeChild(workDir, `${id}.dotnet.ubc`));
       const decoded = decodeBytes(goFresh, options.key === undefined ? {} : { key: options.key });
       const pythonDecoded = decodeBytes(pythonFresh, options.key === undefined ? {} : { key: options.key });
       const rustDecoded = decodeBytes(rustFresh, options.key === undefined ? {} : { key: options.key });
       const javaDecoded = decodeBytes(javaFresh, options.key === undefined ? {} : { key: options.key });
+      const dotnetDecoded = decodeBytes(dotnetFresh, options.key === undefined ? {} : { key: options.key });
 
       assert.ok(decoded.data.equals(input), `${id}: Go-decoded plaintext differs from manifest input`);
       assertMetadata(decoded.meta, entries);
@@ -135,18 +147,23 @@ async function main() {
       assertMetadata(rustDecoded.meta, entries);
       assert.ok(javaDecoded.data.equals(input), `${id}: Java-decoded plaintext differs from manifest input`);
       assertMetadata(javaDecoded.meta, entries);
+      assert.ok(dotnetDecoded.data.equals(input), `${id}: .NET-decoded plaintext differs from manifest input`);
+      assertMetadata(dotnetDecoded.meta, entries);
       assert.ok(encodeBytes(decoded.data, decoded.meta, options).equals(nodeFresh), `${id}: Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(pythonDecoded.data, pythonDecoded.meta, options).equals(nodeFresh), `${id}: Python-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(rustDecoded.data, rustDecoded.meta, options).equals(nodeFresh), `${id}: Rust-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(javaDecoded.data, javaDecoded.meta, options).equals(nodeFresh), `${id}: Java-to-Node re-encode is not byte-identical`);
+      assert.ok(encodeBytes(dotnetDecoded.data, dotnetDecoded.meta, options).equals(nodeFresh), `${id}: .NET-to-Node re-encode is not byte-identical`);
       assert.ok(goFresh.equals(nodeFresh), `${id}: fresh Go and Node containers differ`);
       assert.ok(goFresh.equals(pythonFresh), `${id}: fresh Go and Python containers differ`);
       assert.ok(goFresh.equals(rustFresh), `${id}: fresh Go and Rust containers differ`);
       assert.ok(goFresh.equals(javaFresh), `${id}: fresh Go and Java containers differ`);
+      assert.ok(goFresh.equals(dotnetFresh), `${id}: fresh Go and .NET containers differ`);
     }
     await execFile(pythonCommand, [pythonDriver, "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--verify"], { cwd: repoRoot });
     await execFile(cargoCommand, [...rustArguments, "--verify"], { cwd: repoRoot });
     await execMaven(["-q", "exec:java@cross-decode", `-Dexec.args=${javaExecArgs} --verify`]);
+    await execCrossDecode([...dotnetArguments, "--verify"]);
     process.stdout.write(`Cross-decode passed: ${caseIDs.join(", ")}\n`);
   } finally {
     await rm(workDir, { recursive: true, force: true });

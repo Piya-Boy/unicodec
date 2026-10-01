@@ -5,4 +5,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Ubc.Tests/Ubc.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/CrossDecode/CrossDecode.csproj" />
+  </Folder>
 </Solution>

@@ -147,6 +147,44 @@ byte array field. Keep the public API equivalent to the other SDKs: encode/decod
       opening the spool file concurrently while it's in use. No format or crypto algorithm
       change from the already-reviewed encrypted-path task.)
       Maker/Checker/Human gate: Claude
+- [x] .NET conformance + cross-decode: run all shared vectors (positive byte-exact,
+      negative with exact error ids); decode Go/Node/Python/Rust/Java containers and vice
+      versa. Goal: 100% vector pass; cross-decode Go↔Node↔Python↔Rust↔Java↔.NET green.
+      (solo maker+checker+human-gate 2026-10-01. Added a manifest-driven `ConformanceTests`
+      walking every vector in spec/vectors/vectors.json — all 12 positive, all 25 negative —
+      backed by a dependency-free `MiniJson` reader and a `VectorManifest` helper whose
+      `Decode()` auto-detects plain vs encrypted from the container's own header bytes
+      (matching Go's single `DecodeBytes` dispatcher), same design as the Java port's
+      conformance test after the same early mistake was avoided this time by starting from
+      that lesson directly instead of rediscovering it: the two key-less negative vectors
+      (negative-missing-key, negative-encrypted-cap-missing-key) decode with no key on
+      purpose, every other negative decodes with the vector's own or the canonical key.
+      Added a `tools/CrossDecode` console project (`--vectors --work --cases
+      --write|--verify`, same contract as the Rust and Java CLIs) that links the test
+      project's `MiniJson.cs`/`VectorManifest.cs` by path via `<Compile Include>` instead of
+      duplicating them — the C# equivalent of the Rust example's `#[path = "..."]` module
+      include. Wired .NET in as the sixth cross-decode producer: `--dotnet` flag in
+      tools/crossdecode/main.go, `"dotnet"` added to cross-decode-python.py's producer loop,
+      and scripts/cross-decode.mjs now runs `dotnet run --project tools/CrossDecode`
+      (compiles on demand, like `cargo run` and `mvn exec:java`, so there's no separate
+      "build sdk/dotnet first" step) to write and verify .NET containers alongside the
+      other five. `node scripts/cross-decode.mjs` passes for all 12 positive vectors,
+      6-way byte-identical across Go/Node/Python/Rust/Java/.NET. Gates green: `dotnet test`
+      (46 tests: the new ConformanceTests plus every earlier suite), `TreatWarningsAsErrors`
+      clean, `go build/vet/test ./...` clean, Python 22/22, Node 55/55. SECURITY (manual):
+      the CLI's `SafeChild` appends a trailing separator to the resolved root before the
+      `StartsWith` containment check — necessary in C# specifically because
+      `string.StartsWith` is a raw string comparison (unlike Java's `Path.startsWith`, which
+      is already path-component-aware and didn't need the same guard); case IDs validated
+      against the same `^[a-z0-9]+(-[a-z0-9]+)*$` pattern used elsewhere; the `dotnet`
+      subprocess is invoked with an argv array, not a shell-interpolated string. No format
+      or crypto change — this task adds only test/tooling code.)
+      Maker/Checker/Human gate: Claude
+
+Phase 3 (.NET) exit gate: MET 2026-10-01 — sdk/dotnet passes 100% of shared vectors
+byte-exact, rejects negatives with exact error ids, cross-decodes with
+Go/Node/Python/Rust/Java, System.Security.Cryptography stdlib only, public API equivalent
+to the other SDKs (one-shot plain/encrypted, streaming encoder/decoder, verify, inspect).
 
 ---
 
@@ -448,7 +486,7 @@ Port from frozen spec + shared vectors (mechanical once Phase 1 holds):
 - [x] Python
 - [x] Rust
 - [x] Java
-- [ ] .NET
+- [x] .NET
 - [ ] PHP
 
 Each SDK gate: 100% vector pass + cross-decode with Go/Node. No SDK ships without it.

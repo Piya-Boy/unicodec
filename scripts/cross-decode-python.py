@@ -42,7 +42,7 @@ def main() -> None:
     for case_id in case_ids:
         vector = manifest[case_id]
         expected = _encode_vector(vectors_root, vector)
-        for producer in ("go", "node", "python", "rust", "java"):
+        for producer in ("go", "node", "python", "rust", "java", "dotnet"):
             container = _safe_child(work_dir, f"{case_id}.{producer}.ubc").read_bytes()
             data, metadata = _decode_vector(container, vector)
             input_bytes = _safe_child(vectors_root, vector["input"]).read_bytes()
