@@ -1,0 +1,27 @@
+sdk/java/src/test/java/dev/ubc/EncryptedVectorsTest.java
+  s_71b5d6711856d1::t_1383c07bae35cf 128-137
+  s_71b5d6711856d1::t_65bcff59a8423d 99-103,108,110
+  s_71b5d6711856d1::t_a309785fc4f1fb 1-98,104-107,109,111-118,121,124-127,138-146
+  s_71b5d6711856d1::t_b43a69026ea9a0 119-120,122-123
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_9d0bdb68a7285f 71-106
+sdk/java/src/main/java/dev/ubc/Crypto.java
+  s_71b5d6711856d1::t_c089719e9b02ed 1-170,173-264
+  s_71b5d6711856d1::t_afaf5bf1a2a4f6 171-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2e3815fd3527f30dff9e634f2f090672082c1b43",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
