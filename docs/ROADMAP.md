@@ -131,6 +131,41 @@ an array of ints. Keep the public API equivalent to the other SDKs: encode/decod
       used for the root comparison. No format or crypto algorithm change from the
       already-reviewed encrypted-path task.)
       Maker/Checker/Human gate: Claude
+- [x] PHP conformance + cross-decode: run all shared vectors (positive byte-exact, negative
+      with exact error ids); decode Go/Node/Python/Rust/Java/.NET containers and vice versa.
+      Goal: 100% vector pass; cross-decode Go↔Node↔Python↔Rust↔Java↔.NET↔PHP green.
+      (solo maker+checker+human-gate 2026-10-01. Added a manifest-driven `ConformanceTest`
+      walking every vector in spec/vectors/vectors.json — all 12 positive, all 25 negative —
+      backed by a `VectorManifest` helper in tests/Support/ using PHP's native `json_decode`
+      directly (unlike the Rust/Java/.NET ports, PHP's JSON support is core/bundled, so
+      hand-rolling a parser the way those three test-support layers did would have been
+      pointless extra code for no dependency benefit). `Vector::decode()` auto-detects plain
+      vs encrypted from the container's own header bytes, matching Go's single `DecodeBytes`
+      dispatcher — applied this design from the start instead of rediscovering the key-less-
+      negative-vector pitfall the Java port hit first. Added `bin/cross-decode.php` (`--vectors
+      --work --cases --write|--verify`, same contract as the other four CLIs), requiring the
+      test support file directly since PHP has no project-reference mechanism — closest
+      analog to Rust's `#[path]` include and .NET's linked-file `<Compile Include>`. Wired
+      PHP in as the seventh cross-decode producer: `--php` flag in tools/crossdecode/main.go,
+      `"php"` added to cross-decode-python.py's producer loop, and scripts/cross-decode.mjs
+      now runs `php bin/cross-decode.php` to write and verify PHP containers alongside the
+      other six. `node scripts/cross-decode.mjs` passes for all 12 positive vectors, 7-way
+      byte-identical across Go/Node/Python/Rust/Java/.NET/PHP. Gates green: `vendor/bin/phpunit`
+      (46 tests: the new ConformanceTest plus every earlier suite, 241 assertions),
+      `go build/vet/test ./...` clean, Python 22/22, Node 55/55. SECURITY (manual): the
+      CLI's `safeChild` normalizes both the candidate path and the root to forward slashes
+      before the containment check (Windows path-separator mixing could otherwise defeat a
+      naive comparison); case IDs validated against the same `^[a-z0-9]+(-[a-z0-9]+)*$`
+      pattern used by every other producer's CLI; the `php` subprocess is invoked with an
+      argv array, not a shell-interpolated string. No format or crypto change — this task
+      adds only test/tooling code.)
+      Maker/Checker/Human gate: Claude
+
+Phase 3 (PHP) exit gate: MET 2026-10-01 — sdk/php passes 100% of shared vectors byte-exact,
+rejects negatives with exact error ids, cross-decodes with Go/Node/Python/Rust/Java/.NET,
+PHP core/ext-openssl/ext-hash/ext-mbstring only (no third-party runtime packages), public
+API equivalent to the other SDKs (one-shot plain/encrypted, streaming encoder/decoder,
+verify, inspect).
 
 ---
 
@@ -605,7 +640,7 @@ Port from frozen spec + shared vectors (mechanical once Phase 1 holds):
 - [x] Rust
 - [x] Java
 - [x] .NET
-- [ ] PHP
+- [x] PHP
 
 Each SDK gate: 100% vector pass + cross-decode with Go/Node. No SDK ships without it.
 

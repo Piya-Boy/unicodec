@@ -34,6 +34,13 @@ function execCrossDecode(dotnetArgs) {
   return execFile(dotnetCommand, ["run", "--project", "tools/CrossDecode", "--", ...dotnetArgs], { cwd: dotnetDir });
 }
 
+const phpDir = resolve(repoRoot, "sdk", "php");
+const phpCommand = process.env.PHP ?? "php";
+
+function execPhpCrossDecode(phpArgs) {
+  return execFile(phpCommand, ["bin/cross-decode.php", ...phpArgs], { cwd: phpDir });
+}
+
 function safeId(value) {
   return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
@@ -120,7 +127,9 @@ async function main() {
     await execMaven(["-q", "exec:java@cross-decode", `-Dexec.args=${javaExecArgs} --write`]);
     const dotnetArguments = ["--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")];
     await execCrossDecode([...dotnetArguments, "--write"]);
-    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java", "--dotnet"], { cwd: repoRoot });
+    const phpArguments = ["--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")];
+    await execPhpCrossDecode([...phpArguments, "--write"]);
+    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java", "--dotnet", "--php"], { cwd: repoRoot });
 
     for (const id of caseIDs) {
       const vector = byID.get(id);
@@ -133,11 +142,13 @@ async function main() {
       const rustFresh = await readFile(safeChild(workDir, `${id}.rust.ubc`));
       const javaFresh = await readFile(safeChild(workDir, `${id}.java.ubc`));
       const dotnetFresh = await readFile(safeChild(workDir, `${id}.dotnet.ubc`));
+      const phpFresh = await readFile(safeChild(workDir, `${id}.php.ubc`));
       const decoded = decodeBytes(goFresh, options.key === undefined ? {} : { key: options.key });
       const pythonDecoded = decodeBytes(pythonFresh, options.key === undefined ? {} : { key: options.key });
       const rustDecoded = decodeBytes(rustFresh, options.key === undefined ? {} : { key: options.key });
       const javaDecoded = decodeBytes(javaFresh, options.key === undefined ? {} : { key: options.key });
       const dotnetDecoded = decodeBytes(dotnetFresh, options.key === undefined ? {} : { key: options.key });
+      const phpDecoded = decodeBytes(phpFresh, options.key === undefined ? {} : { key: options.key });
 
       assert.ok(decoded.data.equals(input), `${id}: Go-decoded plaintext differs from manifest input`);
       assertMetadata(decoded.meta, entries);
@@ -149,21 +160,26 @@ async function main() {
       assertMetadata(javaDecoded.meta, entries);
       assert.ok(dotnetDecoded.data.equals(input), `${id}: .NET-decoded plaintext differs from manifest input`);
       assertMetadata(dotnetDecoded.meta, entries);
+      assert.ok(phpDecoded.data.equals(input), `${id}: PHP-decoded plaintext differs from manifest input`);
+      assertMetadata(phpDecoded.meta, entries);
       assert.ok(encodeBytes(decoded.data, decoded.meta, options).equals(nodeFresh), `${id}: Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(pythonDecoded.data, pythonDecoded.meta, options).equals(nodeFresh), `${id}: Python-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(rustDecoded.data, rustDecoded.meta, options).equals(nodeFresh), `${id}: Rust-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(javaDecoded.data, javaDecoded.meta, options).equals(nodeFresh), `${id}: Java-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(dotnetDecoded.data, dotnetDecoded.meta, options).equals(nodeFresh), `${id}: .NET-to-Node re-encode is not byte-identical`);
+      assert.ok(encodeBytes(phpDecoded.data, phpDecoded.meta, options).equals(nodeFresh), `${id}: PHP-to-Node re-encode is not byte-identical`);
       assert.ok(goFresh.equals(nodeFresh), `${id}: fresh Go and Node containers differ`);
       assert.ok(goFresh.equals(pythonFresh), `${id}: fresh Go and Python containers differ`);
       assert.ok(goFresh.equals(rustFresh), `${id}: fresh Go and Rust containers differ`);
       assert.ok(goFresh.equals(javaFresh), `${id}: fresh Go and Java containers differ`);
       assert.ok(goFresh.equals(dotnetFresh), `${id}: fresh Go and .NET containers differ`);
+      assert.ok(goFresh.equals(phpFresh), `${id}: fresh Go and PHP containers differ`);
     }
     await execFile(pythonCommand, [pythonDriver, "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--verify"], { cwd: repoRoot });
     await execFile(cargoCommand, [...rustArguments, "--verify"], { cwd: repoRoot });
     await execMaven(["-q", "exec:java@cross-decode", `-Dexec.args=${javaExecArgs} --verify`]);
     await execCrossDecode([...dotnetArguments, "--verify"]);
+    await execPhpCrossDecode([...phpArguments, "--verify"]);
     process.stdout.write(`Cross-decode passed: ${caseIDs.join(", ")}\n`);
   } finally {
     await rm(workDir, { recursive: true, force: true });
