@@ -1,0 +1,41 @@
+sdk/kotlin/src/main/kotlin/dev/ubc/MetadataEntry.kt
+  s_71b5d6711856d1::t_8443b3e7f064df 1-11
+sdk/kotlin/src/main/kotlin/dev/ubc/UbcException.kt
+  s_71b5d6711856d1::t_ce40da064f1c88 1-4
+sdk/kotlin/src/test/kotlin/dev/ubc/RunTests.kt
+  s_71b5d6711856d1::t_406d4866f2f6e8 1-10
+sdk/kotlin/src/test/kotlin/dev/ubc/TestRunner.kt
+  s_71b5d6711856d1::t_98e7e726793145 1-67
+sdk/kotlin/run-tests.ps1
+  s_71b5d6711856d1::t_0befd60c4b8c97 1-23
+sdk/kotlin/src/main/kotlin/dev/ubc/ErrorCode.kt
+  s_71b5d6711856d1::t_29b533797ed4f8 1-15
+sdk/kotlin/src/main/kotlin/dev/ubc/Header.kt
+  s_71b5d6711856d1::t_3f2a5d3e0a0276 1-122
+sdk/kotlin/src/test/kotlin/dev/ubc/HeaderMetadataVectorsTest.kt
+  s_71b5d6711856d1::t_eead35733e95d9 1-91
+.gitignore
+  s_71b5d6711856d1::t_cb9b16dfad181b 62-64
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_82d291b01db973 868-869,872
+  s_71b5d6711856d1::t_c6333420a717f3 14-38
+  s_71b5d6711856d1::t_13ebcf95def7ff 39-70,72-85
+sdk/kotlin/src/main/kotlin/dev/ubc/Metadata.kt
+  s_71b5d6711856d1::t_f155b5234fa99d 1-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6668f4ec4ce1c84eea907dd74d7b5c067bc73a5d",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
