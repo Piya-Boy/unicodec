@@ -48,3 +48,9 @@ __pycache__/
 # .NET
 /sdk/dotnet/**/bin/
 /sdk/dotnet/**/obj/
+
+# PHP
+/sdk/php/vendor/
+/sdk/php/composer.lock
+/sdk/php/.phpunit.cache/
+/sdk/php/.phpunit.result.cache

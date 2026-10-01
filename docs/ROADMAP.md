@@ -11,22 +11,69 @@ unchecked task under "Active work", and update its checkbox + status here. Legen
 
 ## Active work (do these first, top to bottom)
 
-**Phase 3 — .NET SDK.** Port the frozen format to `sdk/dotnet/` (a class library `Ubc`,
-targeting `net8.0` LTS, with a `Ubc.sln` tying the library and its xUnit test project
-together — `dotnet build`/`dotnet test` from `sdk/dotnet/`). The Go SDK, Python SDK, Rust
-SDK, Java SDK, and shared vectors in spec/vectors are the contract — the port must match
-byte-for-byte and cross-decode with Go/Node/Python/Rust/Java. Crypto from
-`System.Security.Cryptography` (`SHA256`, `HMACSHA256`, `AesGcm`) — stdlib only, zero
-third-party runtime dependencies (xUnit/test-SDK are test-scope only, never packaged).
-No format change. `chunk_count`/`total_size` are true uint64: use `ulong` throughout —
-.NET's `ulong` is natively unsigned, so ordinary `<`/`>`/`==` operators are already
-correct; none of Java's `Long.compareUnsigned` defensive pattern is needed or should be
-ported verbatim. Idiomatic .NET: `UbcException : Exception` carrying a stable `ErrorCode`
-enum plus a `ToStableId()` extension method mapping it to the cross-SDK identifier string
-(e.g. `ERR_BAD_MAGIC`) for the conformance test and cross-decode tooling; no `unsafe`;
-`Span<byte>`/`ReadOnlySpan<byte>` for zero-copy parsing; defensive copies on any mutable
-byte array field. Keep the public API equivalent to the other SDKs: encode/decode
-(one-shot), streaming encoder/decoder (`Stream`), verify, inspect.
+**Phase 3 — PHP SDK.** Port the frozen format to `sdk/php/` (a Composer package `ubc/ubc`,
+PHP >=8.2, with PHPUnit as a dev-only dependency — `composer install` then `vendor/bin/
+phpunit` from `sdk/php/`). The Go SDK, Python SDK, Rust SDK, Java SDK, .NET SDK, and shared
+vectors in spec/vectors are the contract — the port must match byte-for-byte and
+cross-decode with Go/Node/Python/Rust/Java/.NET. Crypto from PHP core/ext-openssl/ext-hash
+(`hash()`/`hash_hmac()`/`hash_equals()`, `openssl_encrypt`/`openssl_decrypt` with
+`aes-256-gcm`) — bundled extensions, not third-party packages. No format change.
+`chunk_count`/`total_size` are true uint64, but PHP has no native unsigned 64-bit type at
+all (native `int` is signed 64-bit, no `compareUnsigned`-equivalent builtin, and ext-gmp
+for full correctness was explicitly declined as unneeded machinery for an unreachable
+boundary): matches the Java port's tradeoff — every bit pattern round-trips correctly
+through `pack('P', ...)`/`unpack('P', ...)` (verified experimentally with an all-bits-set
+value), but magnitude comparisons use plain signed operators and values above
+`PHP_INT_MAX` simply cannot be represented. Idiomatic PHP: `UbcException extends
+\RuntimeException` carrying a stable `ErrorCode` backed enum (`->value` gives the stable
+identifier string directly, no separate mapping method needed) — note the property is
+named `errorCode`, not `code`, because `\Exception` already declares a non-readonly `$code`
+property for `getCode()` and a promoted readonly `$code` would collide with it (hit this as
+a real fatal error before the fix); binary data (metadata values, chunk bytes, nonces,
+keys) represented as PHP `string` throughout, the idiomatic PHP byte-string convention, not
+an array of ints. Keep the public API equivalent to the other SDKs: encode/decode
+(one-shot), streaming encoder/decoder, verify, inspect.
+
+- [x] PHP scaffold + plain path: `sdk/php/` Composer package `ubc/ubc`, `ErrorCode` backed
+      enum mapping every stable error id (SPEC.md §5), `UbcException`, header + TLV
+      encode/parse, chunking + SHA-256 flat root one-shot encode/decode. Goal: header/TLV
+      round-trip matching shared vector bytes; plain path byte-exact to every plain vector;
+      ERR_ROOT_MISMATCH on a flipped byte. (Scaffold and plain path combined into one task
+      here — both are mechanical ports with no crypto, unlike the finer-grained split used
+      for Rust/Java/.NET.)
+      (solo maker+checker+human-gate 2026-10-01, continuing per "keep going" instruction.
+      PHP 8.3.33 + Composer 2.9.7 already present, openssl/hash/mbstring extensions all
+      loaded, no bootstrap needed. 26/26 PHPUnit tests pass (19 header/metadata + 7 plain):
+      all positive vectors' headers round-trip byte-exact, plain-metadata TLV round-trips
+      byte-exact, 9 header/metadata negative vectors return their exact stable error ids,
+      metadata encoder sorts tags and rejects duplicates, metadata length cap is checked
+      before copying entries; all 6 plain vectors (empty, one-byte, chunk-1m,
+      chunk-1m-plus-one, multi-3m, metadata) encode byte-exact and decode back to exact
+      input; a flipped payload byte returns ERR_ROOT_MISMATCH; negative-truncated/root-
+      mismatch/trailing-data/oversized-clen return their exact stable error ids.
+      `vendor/bin/phpunit` clean. CHECK: UTF-8 filename validation uses
+      `mb_check_encoding()`, experimentally confirmed to reject overlong encodings (0xC0
+      0x80) and unpaired surrogates (0xED 0xA0 0x80) the same way the Java/.NET strict
+      decoders do, not just ASCII-subset validation. SECURITY (manual): DoS caps
+      (`maxChunkLen`/`maxChunkCount`/`maxTotalSize`) checked before any `substr` copy of
+      untrusted chunk bytes; root comparison uses `hash_equals()` (PHP's constant-time
+      compare primitive, the correct choice here — not a hand-rolled `===`). No format or
+      crypto algorithm change — scaffold + plain only, no AEAD code yet.)
+      Maker/Checker/Human gate: Claude
+
+---
+
+## Completed: Phase 3 — .NET SDK
+
+Port the frozen format to `sdk/dotnet/` (a class library `Ubc`, targeting `net8.0` LTS,
+with a `Ubc.sln` tying the library and its xUnit test project together). The Go SDK,
+Python SDK, Rust SDK, Java SDK, and shared vectors in spec/vectors are the contract — the
+port matches byte-for-byte and cross-decodes with Go/Node/Python/Rust/Java. Crypto from
+`System.Security.Cryptography` (`SHA256`, `HMACSHA256`, `AesGcm`) — stdlib only.
+`chunk_count`/`total_size` use `ulong`, natively unsigned in .NET, so ordinary `<`/`>`/`==`
+operators are already correct. `UbcException : Exception` carrying a stable `ErrorCode`
+enum plus a `ToStableId()` extension method; no `unsafe`; `Span<byte>`/`ReadOnlySpan<byte>`
+for zero-copy parsing; defensive copies on any mutable byte array field.
 
 - [x] .NET scaffold: `sdk/dotnet/` class library `Ubc` (net8.0) with `Ubc.sln`,
       `ErrorCode` enum + `ToStableId()` mapping every stable error id (SPEC.md §5),

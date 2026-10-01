@@ -1,0 +1,28 @@
+{
+    "name": "ubc/ubc",
+    "description": "Universal Binary Container (UBC) v1 reference SDK for PHP.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "ext-openssl": "*",
+        "ext-hash": "*",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ubc\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ubc\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
