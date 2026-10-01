@@ -168,6 +168,50 @@ inspect.
       constant-time compare. No format or crypto algorithm change from the already-reviewed
       encrypted-path task.)
       Maker/Checker/Human gate: Claude
+- [x] Dart conformance + cross-decode: run all shared vectors (positive byte-exact,
+      negative with exact error ids); decode Go/Node/Python/Rust/Java/.NET/PHP containers
+      and vice versa. Goal: 100% vector pass; cross-decode
+      Go↔Node↔Python↔Rust↔Java↔.NET↔PHP↔Dart green.
+      (solo maker+checker+human-gate 2026-10-01. Added a manifest-driven `conformance_test`
+      walking every vector in spec/vectors/vectors.json — all 12 positive, all 25 negative —
+      backed by a `VectorManifest` helper in test/support/ using `dart:convert`'s built-in
+      `json.decode` (core, no package needed — same reasoning as the PHP port's
+      `json_decode`, unlike the Rust/Java/.NET ports which hand-rolled JSON readers because
+      their languages' stdlib genuinely has none). `Vector.decode()` auto-detects plain vs
+      encrypted from the container's own header bytes, matching Go's single `DecodeBytes`
+      dispatcher — applied this design from the start instead of rediscovering the key-less-
+      negative-vector pitfall the Java port hit first. Added `bin/cross_decode.dart`
+      (`--vectors --work --cases --write|--verify`, same contract as the other CLIs),
+      importing the test support file by relative path across the `bin`/`test` directory
+      boundary — Dart has no project-reference mechanism, so this is the same category of
+      workaround as Rust's `#[path]` include, .NET's linked `<Compile Include>`, and PHP's
+      direct `require`. Wired Dart in as the eighth cross-decode producer: `--dart` flag in
+      tools/crossdecode/main.go, `"dart"` added to cross-decode-python.py's producer loop,
+      and scripts/cross-decode.mjs now runs the Dart CLI — hit the same class of issue the
+      Java/.NET wrappers hit earlier in this same file (`spawn dart ENOENT`): on this
+      Windows machine `dart` resolves to `dart.bat` alongside an extensionless `dart`
+      wrapper, and Node's `execFile` cannot spawn a `.bat` directly, so `execDartCrossDecode`
+      routes through `cmd.exe /c` on Windows like the Maven/.NET wrappers already do.
+      `node scripts/cross-decode.mjs` passes for all 12 positive vectors, 8-way
+      byte-identical across Go/Node/Python/Rust/Java/.NET/PHP/Dart. Gates green: `dart test`
+      (46 tests: the new conformance test plus every earlier suite), `dart analyze` clean,
+      `go build/vet/test ./...` clean, Python 22/22, Node 55/55. SECURITY (manual): the
+      CLI's `safeChild` normalizes the candidate path and appends a trailing separator to
+      the root before the `startsWith` containment check (same reasoning as every other
+      SDK's CLI — a raw string-prefix check without the separator could be defeated by a
+      sibling directory sharing a name prefix); case IDs validated against the same
+      `^[a-z0-9]+(-[a-z0-9]+)*$` pattern used everywhere else; the `dart`/`cmd.exe`
+      subprocess is invoked with an argv array, not a shell-interpolated string. No format
+      or crypto change — this task adds only test/tooling code.)
+      Maker/Checker/Human gate: Claude
+
+Future SDKs — Dart: MET 2026-10-01 — sdk/dart passes 100% of shared vectors byte-exact,
+rejects negatives with exact error ids, cross-decodes with
+Go/Node/Python/Rust/Java/.NET/PHP, package:crypto + package:cryptography only (the one
+pair of third-party runtime dependencies across all 8 SDKs so far, required because Dart's
+core SDK has no crypto at all — confirmed and explicitly chosen by the human rather than
+assumed), public API equivalent to the other SDKs (one-shot plain/encrypted, pull-based
+async streaming encoder/decoder, verify, inspect).
 
 ---
 
@@ -815,7 +859,7 @@ Dart 3.13.2 present; Swift (poor native Windows support), Kotlin (needs separate
 install), and Ruby (not installed) all absent — Dart started first for that reason, not
 priority order.
 
-- [~] Dart — in progress (see Active work above)
+- [x] Dart
 - [ ] Kotlin
 - [ ] Swift
 - [ ] Ruby

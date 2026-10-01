@@ -47,17 +47,18 @@ func main() {
 	java := flag.Bool("java", false, "also verify Java-produced containers")
 	dotnet := flag.Bool("dotnet", false, "also verify .NET-produced containers")
 	php := flag.Bool("php", false, "also verify PHP-produced containers")
+	dart := flag.Bool("dart", false, "also verify Dart-produced containers")
 	flag.Parse()
 
 	if flag.NArg() != 0 {
 		die("unexpected positional arguments")
 	}
-	if err := run(*vectorsRoot, *workDir, *casesValue, *python, *rust, *java, *dotnet, *php); err != nil {
+	if err := run(*vectorsRoot, *workDir, *casesValue, *python, *rust, *java, *dotnet, *php, *dart); err != nil {
 		die("cross-decode: %v", err)
 	}
 }
 
-func run(vectorsRoot, workDir, casesValue string, verifyPython, verifyRust, verifyJava, verifyDotnet, verifyPhp bool) error {
+func run(vectorsRoot, workDir, casesValue string, verifyPython, verifyRust, verifyJava, verifyDotnet, verifyPhp, verifyDart bool) error {
 	root, err := existingDirectory(vectorsRoot, "vectors")
 	if err != nil {
 		return err
@@ -83,7 +84,7 @@ func run(vectorsRoot, workDir, casesValue string, verifyPython, verifyRust, veri
 		if vector.ExpectError != nil {
 			return fmt.Errorf("negative vector case %q is not allowed", id)
 		}
-		if err := crossDecodeCase(root, work, vector, verifyPython, verifyRust, verifyJava, verifyDotnet, verifyPhp); err != nil {
+		if err := crossDecodeCase(root, work, vector, verifyPython, verifyRust, verifyJava, verifyDotnet, verifyPhp, verifyDart); err != nil {
 			return fmt.Errorf("%s: %w", id, err)
 		}
 	}
@@ -165,7 +166,7 @@ func readManifest(root string) (map[string]vector, error) {
 	return vectors, nil
 }
 
-func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython, verifyRust, verifyJava, verifyDotnet, verifyPhp bool) error {
+func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython, verifyRust, verifyJava, verifyDotnet, verifyPhp, verifyDart bool) error {
 	if vector.Input == "" {
 		return fmt.Errorf("positive vector has no input")
 	}
@@ -212,6 +213,9 @@ func crossDecodeCase(vectorsRoot, workDir string, vector vector, verifyPython, v
 	}
 	if verifyPhp {
 		producers = append(producers, "php")
+	}
+	if verifyDart {
+		producers = append(producers, "dart")
 	}
 	for _, producer := range producers {
 		containerPath, err := safeChild(workDir, vector.ID+"."+producer+".ubc")

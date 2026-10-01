@@ -41,6 +41,18 @@ function execPhpCrossDecode(phpArgs) {
   return execFile(phpCommand, ["bin/cross-decode.php", ...phpArgs], { cwd: phpDir });
 }
 
+const dartDir = resolve(repoRoot, "sdk", "dart");
+const dartCommand = process.env.DART ?? "dart";
+
+function execDartCrossDecode(dartArgs) {
+  // On Windows, `dart` resolves to dart.bat (a batch file) when invoked via `where`/PATH
+  // in some installs; Node's execFile cannot spawn a .bat directly (EINVAL/ENOENT) without
+  // going through cmd.exe, same issue the Java/`.NET` wrappers hit earlier in this script.
+  return isWindows
+    ? execFile("cmd.exe", ["/c", dartCommand, "run", "bin/cross_decode.dart", ...dartArgs], { cwd: dartDir })
+    : execFile(dartCommand, ["run", "bin/cross_decode.dart", ...dartArgs], { cwd: dartDir });
+}
+
 function safeId(value) {
   return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
@@ -129,7 +141,9 @@ async function main() {
     await execCrossDecode([...dotnetArguments, "--write"]);
     const phpArguments = ["--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")];
     await execPhpCrossDecode([...phpArguments, "--write"]);
-    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java", "--dotnet", "--php"], { cwd: repoRoot });
+    const dartArguments = ["--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(",")];
+    await execDartCrossDecode([...dartArguments, "--write"]);
+    await execFile("go", ["run", "./tools/crossdecode", "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--python", "--rust", "--java", "--dotnet", "--php", "--dart"], { cwd: repoRoot });
 
     for (const id of caseIDs) {
       const vector = byID.get(id);
@@ -143,12 +157,14 @@ async function main() {
       const javaFresh = await readFile(safeChild(workDir, `${id}.java.ubc`));
       const dotnetFresh = await readFile(safeChild(workDir, `${id}.dotnet.ubc`));
       const phpFresh = await readFile(safeChild(workDir, `${id}.php.ubc`));
+      const dartFresh = await readFile(safeChild(workDir, `${id}.dart.ubc`));
       const decoded = decodeBytes(goFresh, options.key === undefined ? {} : { key: options.key });
       const pythonDecoded = decodeBytes(pythonFresh, options.key === undefined ? {} : { key: options.key });
       const rustDecoded = decodeBytes(rustFresh, options.key === undefined ? {} : { key: options.key });
       const javaDecoded = decodeBytes(javaFresh, options.key === undefined ? {} : { key: options.key });
       const dotnetDecoded = decodeBytes(dotnetFresh, options.key === undefined ? {} : { key: options.key });
       const phpDecoded = decodeBytes(phpFresh, options.key === undefined ? {} : { key: options.key });
+      const dartDecoded = decodeBytes(dartFresh, options.key === undefined ? {} : { key: options.key });
 
       assert.ok(decoded.data.equals(input), `${id}: Go-decoded plaintext differs from manifest input`);
       assertMetadata(decoded.meta, entries);
@@ -162,24 +178,29 @@ async function main() {
       assertMetadata(dotnetDecoded.meta, entries);
       assert.ok(phpDecoded.data.equals(input), `${id}: PHP-decoded plaintext differs from manifest input`);
       assertMetadata(phpDecoded.meta, entries);
+      assert.ok(dartDecoded.data.equals(input), `${id}: Dart-decoded plaintext differs from manifest input`);
+      assertMetadata(dartDecoded.meta, entries);
       assert.ok(encodeBytes(decoded.data, decoded.meta, options).equals(nodeFresh), `${id}: Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(pythonDecoded.data, pythonDecoded.meta, options).equals(nodeFresh), `${id}: Python-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(rustDecoded.data, rustDecoded.meta, options).equals(nodeFresh), `${id}: Rust-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(javaDecoded.data, javaDecoded.meta, options).equals(nodeFresh), `${id}: Java-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(dotnetDecoded.data, dotnetDecoded.meta, options).equals(nodeFresh), `${id}: .NET-to-Node re-encode is not byte-identical`);
       assert.ok(encodeBytes(phpDecoded.data, phpDecoded.meta, options).equals(nodeFresh), `${id}: PHP-to-Node re-encode is not byte-identical`);
+      assert.ok(encodeBytes(dartDecoded.data, dartDecoded.meta, options).equals(nodeFresh), `${id}: Dart-to-Node re-encode is not byte-identical`);
       assert.ok(goFresh.equals(nodeFresh), `${id}: fresh Go and Node containers differ`);
       assert.ok(goFresh.equals(pythonFresh), `${id}: fresh Go and Python containers differ`);
       assert.ok(goFresh.equals(rustFresh), `${id}: fresh Go and Rust containers differ`);
       assert.ok(goFresh.equals(javaFresh), `${id}: fresh Go and Java containers differ`);
       assert.ok(goFresh.equals(dotnetFresh), `${id}: fresh Go and .NET containers differ`);
       assert.ok(goFresh.equals(phpFresh), `${id}: fresh Go and PHP containers differ`);
+      assert.ok(goFresh.equals(dartFresh), `${id}: fresh Go and Dart containers differ`);
     }
     await execFile(pythonCommand, [pythonDriver, "--vectors", vectorsRoot, "--work", workDir, "--cases", caseIDs.join(","), "--verify"], { cwd: repoRoot });
     await execFile(cargoCommand, [...rustArguments, "--verify"], { cwd: repoRoot });
     await execMaven(["-q", "exec:java@cross-decode", `-Dexec.args=${javaExecArgs} --verify`]);
     await execCrossDecode([...dotnetArguments, "--verify"]);
     await execPhpCrossDecode([...phpArguments, "--verify"]);
+    await execDartCrossDecode([...dartArguments, "--verify"]);
     process.stdout.write(`Cross-decode passed: ${caseIDs.join(", ")}\n`);
   } finally {
     await rm(workDir, { recursive: true, force: true });
