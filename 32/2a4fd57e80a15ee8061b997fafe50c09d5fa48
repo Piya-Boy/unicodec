@@ -1,0 +1,29 @@
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_4397baa73ccb17 72-93
+sdk/kotlin/src/test/kotlin/dev/ubc/RunTests.kt
+  s_71b5d6711856d1::t_504823013e79c5 6
+sdk/kotlin/src/main/kotlin/dev/ubc/DecodeResult.kt
+  s_71b5d6711856d1::t_b2d580b81ee334 1-4
+sdk/kotlin/src/test/kotlin/dev/ubc/PlainVectorsTest.kt
+  s_71b5d6711856d1::t_f5805aeabfb134 1-86
+sdk/kotlin/src/main/kotlin/dev/ubc/Payload.kt
+  s_71b5d6711856d1::t_c6a51c9a59394e 1-132
+sdk/kotlin/src/main/kotlin/dev/ubc/DecodeOptions.kt
+  s_71b5d6711856d1::t_5a402a03b3dce2 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "322a4fd57e80a15ee8061b997fafe50c09d5fa48",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
