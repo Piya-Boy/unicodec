@@ -1,0 +1,45 @@
+sdk/java/src/main/java/dev/ubc/VerifyReport.java
+  s_71b5d6711856d1::t_fcd2a887d14579 1-12
+sdk/java/src/main/java/dev/ubc/Decoder.java
+  s_71b5d6711856d1::t_87d43e3d3de308 1-218
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_c21b9f03bc36de 107-152
+sdk/java/src/test/java/dev/ubc/StreamingTest.java
+  s_71b5d6711856d1::t_d89ace5a7ed472 59
+  s_71b5d6711856d1::t_de92477c2fe2ea 163-167
+  s_71b5d6711856d1::t_73d3cf8ea01941 1-58,60-162,168-207
+sdk/java/src/main/java/dev/ubc/RootAccumulator.java
+  s_71b5d6711856d1::t_68dd518f9563a4 1-39
+sdk/java/src/main/java/dev/ubc/EncodeOptions.java
+  s_71b5d6711856d1::t_5dde72c07283db 1-41
+sdk/java/src/main/java/dev/ubc/CryptoInternal.java
+  s_71b5d6711856d1::t_176275e87760b6 1-92,101-120
+  s_71b5d6711856d1::t_7d1a5edd53448d 93-100
+sdk/java/src/main/java/dev/ubc/Crypto.java
+  s_71b5d6711856d1::t_a81da24eb482e9 53,55,67-68,72,75,104,106,125-126,131-132,154,165
+sdk/java/src/main/java/dev/ubc/ContainerInfo.java
+  s_71b5d6711856d1::t_4c09d5f00473f6 1-29
+sdk/java/src/main/java/dev/ubc/Streaming.java
+  s_71b5d6711856d1::t_238c2fbe8b3d80 1-100
+sdk/java/src/main/java/dev/ubc/Encoder.java
+  s_71b5d6711856d1::t_cba2d428dbf5d3 1-9,13-14,16-36,38-40,57-132,135-170
+  s_71b5d6711856d1::t_30fdd8a64fc5de 37,41-56
+  s_71b5d6711856d1::t_6bdcd93e21d65d 133-134
+  s_71b5d6711856d1::t_df57a428446efe 10-12,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "92751cc9a6c8e9d8a3bd28cf34e3b62df07e24e1",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
