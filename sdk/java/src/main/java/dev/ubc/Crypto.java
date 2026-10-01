@@ -3,22 +3,14 @@ package dev.ubc;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
 import javax.crypto.AEADBadTagException;
-import javax.crypto.Cipher;
-import javax.crypto.Mac;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 /** One-shot AES-256-GCM encrypted UBC v1 encoding and decoding (SPEC.md sections 3-4). */
 public final class Crypto {
-    private static final int GCM_TAG_SIZE = 16;
-    private static final int GCM_TAG_BITS = GCM_TAG_SIZE * 8;
-    private static final byte[] ROOT_INFO = "UBC1 root authentication".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
     private static final int KEY_SIZE = 32;
     private static final int NONCE_SIZE = 12;
     private static final int FOOTER_SIZE = 36;
@@ -58,9 +50,9 @@ public final class Crypto {
                 data.length,
                 baseNonce);
         byte[] headerBytes = header.toBytes();
-        byte[] metadataDigest = sha256(metadata);
+        byte[] metadataDigest = CryptoInternal.sha256(metadata);
 
-        Mac root = hmacSha256(rootKey(key, baseNonce));
+        RootAccumulator root = RootAccumulator.keyed(CryptoInternal.rootKey(key, baseNonce));
         root.update(headerBytes);
         root.update(metadata);
 
@@ -72,15 +64,15 @@ public final class Crypto {
         for (long offset = 0; offset < dataLength; offset += chunkSize, index++) {
             int intOffset = (int) offset;
             int length = (int) Math.min(chunkSize, dataLength - offset);
-            byte[] ciphertext = gcmEncrypt(key, chunkNonce(baseNonce, index), data, intOffset, length,
-                    chunkAad(headerBytes, metadataDigest, index));
+            byte[] ciphertext = CryptoInternal.gcmEncrypt(key, CryptoInternal.chunkNonce(baseNonce, index), data,
+                    intOffset, length, CryptoInternal.chunkAad(headerBytes, metadataDigest, index));
             ByteBuffer clen = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(ciphertext.length);
             output.writeBytes(clen.array());
             output.writeBytes(ciphertext);
-            root.update(sha256(ciphertext));
+            root.update(CryptoInternal.sha256(ciphertext));
         }
 
-        output.writeBytes(root.doFinal());
+        output.writeBytes(root.finish());
         output.writeBytes(FOOTER_MAGIC);
         return output.toByteArray();
     }
@@ -109,9 +101,9 @@ public final class Crypto {
             throw new UbcException(ErrorCode.ERR_TRUNCATED);
         }
 
-        byte[] metadataDigest = sha256(metadataRegion);
+        byte[] metadataDigest = CryptoInternal.sha256(metadataRegion);
         byte[] baseNonce = header.baseNonce();
-        Mac root = hmacSha256(rootKey(opts.key, baseNonce));
+        RootAccumulator root = RootAccumulator.keyed(CryptoInternal.rootKey(opts.key, baseNonce));
         root.update(headerBytes);
         root.update(metadataRegion);
 
@@ -130,14 +122,14 @@ public final class Crypto {
                 throw new UbcException(ErrorCode.ERR_TRUNCATED);
             }
             int chunkLengthInt = (int) chunkLength;
-            root.update(sha256Of(container, offset, chunkLengthInt));
-            if (chunkLength < GCM_TAG_SIZE) {
+            root.update(CryptoInternal.sha256Of(container, offset, chunkLengthInt));
+            if (chunkLength < CryptoInternal.GCM_TAG_SIZE) {
                 throw new UbcException(ErrorCode.ERR_CHUNK_AUTH);
             }
             byte[] plaintextChunk;
             try {
-                plaintextChunk = gcmDecrypt(opts.key, chunkNonce(baseNonce, index), container, offset, chunkLengthInt,
-                        chunkAad(headerBytes, metadataDigest, index));
+                plaintextChunk = CryptoInternal.gcmDecrypt(opts.key, CryptoInternal.chunkNonce(baseNonce, index),
+                        container, offset, chunkLengthInt, CryptoInternal.chunkAad(headerBytes, metadataDigest, index));
             } catch (AEADBadTagException e) {
                 throw new UbcException(ErrorCode.ERR_CHUNK_AUTH);
             }
@@ -159,7 +151,7 @@ public final class Crypto {
         }
         byte[] plaintextBytes = plaintext.toByteArray();
         if (Integer.toUnsignedLong(plaintextBytes.length) != header.totalSize
-                || !MessageDigest.isEqual(footerRoot, root.doFinal())) {
+                || !MessageDigest.isEqual(footerRoot, root.finish())) {
             throw new UbcException(ErrorCode.ERR_ROOT_MISMATCH);
         }
         if (container.length != offset + FOOTER_SIZE) {
@@ -170,86 +162,7 @@ public final class Crypto {
 
     /** Package-private: exposed only so conformance tests can check this against the shared known-answer fixture. */
     static byte[] rootKey(byte[] key, byte[] baseNonce) {
-        Mac prkMac = hmacSha256(baseNonce);
-        byte[] prk = prkMac.doFinal(key);
-        Mac rootMac = hmacSha256(prk);
-        rootMac.update(ROOT_INFO);
-        return rootMac.doFinal(new byte[] {0x01});
-    }
-
-    private static byte[] chunkNonce(byte[] baseNonce, long index) {
-        byte[] indexBytes = le96(index);
-        byte[] nonce = new byte[NONCE_SIZE];
-        for (int i = 0; i < NONCE_SIZE; i++) {
-            nonce[i] = (byte) (baseNonce[i] ^ indexBytes[i]);
-        }
-        return nonce;
-    }
-
-    private static byte[] le96(long index) {
-        // index is a zero-based chunk counter; SPEC.md 3 defines le96(i) as i encoded as a
-        // 12-byte little-endian integer. The high 4 bytes are always zero at this scale.
-        byte[] result = new byte[NONCE_SIZE];
-        ByteBuffer.wrap(result, 0, 8).order(ByteOrder.LITTLE_ENDIAN).putLong(index);
-        return result;
-    }
-
-    private static byte[] chunkAad(byte[] headerBytes, byte[] metadataDigest, long index) {
-        ByteBuffer buffer = ByteBuffer.allocate(headerBytes.length + metadataDigest.length + 8)
-                .order(ByteOrder.LITTLE_ENDIAN);
-        buffer.put(headerBytes);
-        buffer.put(metadataDigest);
-        buffer.putLong(index);
-        return buffer.array();
-    }
-
-    private static byte[] gcmEncrypt(byte[] key, byte[] nonce, byte[] data, int offset, int length, byte[] aad) {
-        try {
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(GCM_TAG_BITS, nonce));
-            cipher.updateAAD(aad);
-            return cipher.doFinal(data, offset, length);
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("AES-256-GCM must be available on every JDK", e);
-        }
-    }
-
-    private static byte[] gcmDecrypt(byte[] key, byte[] nonce, byte[] data, int offset, int length, byte[] aad)
-            throws AEADBadTagException {
-        try {
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(GCM_TAG_BITS, nonce));
-            cipher.updateAAD(aad);
-            return cipher.doFinal(data, offset, length);
-        } catch (AEADBadTagException e) {
-            throw e;
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("AES-256-GCM must be available on every JDK", e);
-        }
-    }
-
-    private static byte[] sha256(byte[] data) {
-        return sha256Of(data, 0, data.length);
-    }
-
-    private static byte[] sha256Of(byte[] data, int offset, int length) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update(data, offset, length);
-            return digest.digest();
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 must be available on every JDK", e);
-        }
-    }
-
-    private static Mac hmacSha256(byte[] key) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(key, "HmacSHA256"));
-            return mac;
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("HmacSHA256 must be available on every JDK", e);
-        }
+        return CryptoInternal.rootKey(key, baseNonce);
     }
 
     private static void validateEncodeKey(byte[] key) {

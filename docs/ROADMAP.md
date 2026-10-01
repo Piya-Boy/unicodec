@@ -104,6 +104,52 @@ streaming encoder/decoder (`InputStream`/`OutputStream`), verify, inspect.
       the scaffold task) so the per-chunk XOR nonce can't be corrupted by external mutation.
       No format change; crypto matches SPEC.md §3-4 exactly, no deviation.)
       Maker/Checker/Human gate: Claude
+- [x] Java streaming encoder/decoder (InputStream/OutputStream) + verify + inspect; DoS caps
+      on untrusted lengths. Goal: streaming output identical to one-shot; fail-closed; caps
+      enforced before allocation. Constant-time compare for the encrypted root.
+      (solo maker+checker+human-gate 2026-10-01. Extracted the nonce/AAD/root-key/GCM
+      primitives shared by the one-shot and streaming paths into package-private
+      `CryptoInternal` (and a `RootAccumulator` wrapping the plain-SHA-256-vs-keyed-HMAC
+      branch) so the two paths cannot silently diverge — `Crypto.java` now delegates to it
+      instead of carrying its own copies. Before writing `Encoder`/`Decoder`, re-read the
+      Rust streaming task's full security history (3 checker rounds) in this same roadmap
+      file and applied its three fixes from the start instead of rediscovering them:
+      (1) the encoder's chunk buffer is sized `min(totalSize, chunkSize)`, not `chunkSize`,
+      so a large declared chunk_size on small/empty input can't over-allocate; (2) the
+      decoder preflights (reads) the 36-byte footer before authenticating the final
+      encrypted chunk, so a stream that is both truncated and has a corrupted final tag
+      surfaces ERR_TRUNCATED, matching SPEC.md §5's truncation-before-chunk-auth precedence,
+      instead of the misleading ERR_CHUNK_AUTH a naive implementation would raise; (3) the
+      encoder's plaintext spool file is deleted immediately after a successful finish (in a
+      try/finally so this also runs on any mid-finish failure).
+      25/25 JUnit tests pass: streamed plain output is byte-exact vs the one-shot plain-multi-
+      3m vector even when written in two unequal chunks, and decodes correctly through a
+      deliberately pathological InputStream that only ever returns 1 byte per read() call;
+      streamed encrypted output is byte-exact vs the one-shot encrypted-chunk-1m-plus-one
+      vector; a corrupted footer and a trailing extra byte are both caught before the
+      decoder yields -1 (root withheld until verified); the truncated+corrupted-final-tag
+      scenario returns ERR_TRUNCATED, not ERR_CHUNK_AUTH; an encoder with a 256 MiB
+      chunk_size against a 3-byte input round-trips without the old Rust-class
+      over-allocation bug; a streaming decoder with max_chunk_len=4 against 1 MiB chunks
+      throws ERR_TRUNCATED on the first read(); verify() reports ok=false with the correct
+      error code on a corrupted container and inspect() reads only the header+metadata
+      region, unaffected by a mangled footer. `mvnw test` clean, `-Xlint:all -Werror` clean.
+      CHECK: confirmed Go (the canonical reference SDK, sdk/go/decoder.go) and Python both
+      release plain-mode chunks incrementally per-read with no full-buffering spool before
+      Rust's streaming Decoder was initially written to buffer entire plain-mode output
+      before releasing it — once confirmed that Go's canonical behavior is unbuffered,
+      Java's Decoder was built to match Go/Python's cross-SDK convention (unbuffered,
+      matches SPEC.md §5's "MAY release per-chunk" language, which textually applies per-tag
+      to encrypted mode but Go/Python extend the same early-release convention to plain mode
+      and that is the behavior this port must stay consistent with). SECURITY (manual):
+      the encoder's plaintext spool file is created via `Files.createTempFile` with
+      owner-only POSIX permissions where supported, falling back to the platform default
+      (already owner-restricted under NTFS) on non-POSIX filesystems; `deleteOnExit()` is
+      registered at spool creation as a safety net in case a caller never calls `close()`;
+      chunk-length DoS caps (`maxChunkLen`) are checked before any `readExact` allocation in
+      the decoder, matching the one-shot path's bound. No format or crypto algorithm change
+      from the already-reviewed encrypted-path task.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
