@@ -1,0 +1,42 @@
+sdk/dotnet/src/Ubc/MetadataEntry.cs
+  s_71b5d6711856d1::t_a0c0bde1c3bae4 1-19
+sdk/dotnet/src/Ubc/Metadata.cs
+  s_71b5d6711856d1::t_41bb08e2364336 34
+  s_71b5d6711856d1::t_0e0cf4169667f7 1-33,35-97,99-150
+  s_71b5d6711856d1::t_5f7e932c63b44d 98
+sdk/dotnet/tests/Ubc.Tests/HeaderMetadataVectorsTests.cs
+  s_71b5d6711856d1::t_e85d999f20b046 9
+  s_71b5d6711856d1::t_25089052298a34 1-8,10-105
+sdk/dotnet/tests/Ubc.Tests/Ubc.Tests.csproj
+  s_71b5d6711856d1::t_55e3de689a59ad 1-22
+sdk/dotnet/src/Ubc/Ubc.csproj
+  s_71b5d6711856d1::t_0ca9b529915ff2 1-18
+sdk/dotnet/src/Ubc/UbcException.cs
+  s_71b5d6711856d1::t_18401798ce4ca1 1-32
+.gitignore
+  s_71b5d6711856d1::t_d93482fd03246e 47-50
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_dedf0469c15991 14-71
+sdk/dotnet/src/Ubc/Header.cs
+  s_71b5d6711856d1::t_4e3eb663072c2c 1-132
+sdk/dotnet/src/Ubc/ErrorCode.cs
+  s_71b5d6711856d1::t_793d88052c429b 1-16
+sdk/dotnet/Ubc.slnx
+  s_71b5d6711856d1::t_4b026f57760620 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "254f7d9ebcd50c4e1376fa821507b71595c4afb4",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
