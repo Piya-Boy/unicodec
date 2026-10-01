@@ -1,0 +1,31 @@
+sdk/dotnet/src/Ubc/Ubc.csproj
+  s_71b5d6711856d1::t_2c2b8ea8b46199 18-23
+sdk/dotnet/tests/Ubc.Tests/EncryptedVectorsTests.cs
+  s_71b5d6711856d1::t_49c6c8621695c7 1-126
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_7e7debfc45435e 73-104
+sdk/dotnet/src/Ubc/RootAccumulator.cs
+  s_71b5d6711856d1::t_2958d49f89ddd5 1-67
+sdk/dotnet/src/Ubc/Crypto.cs
+  s_71b5d6711856d1::t_dfdb8b03ddd26d 41
+  s_71b5d6711856d1::t_512718efa7d684 1-40,42-186
+sdk/dotnet/src/Ubc/CryptoInternal.cs
+  s_71b5d6711856d1::t_9a51f636f8ce55 1-59,65-77
+  s_71b5d6711856d1::t_2761847fd85251 60-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b3cc324657676969964030ba247a1c8cee61701c",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
