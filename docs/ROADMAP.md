@@ -68,6 +68,42 @@ streaming encoder/decoder (`InputStream`/`OutputStream`), verify, inspect.
       arithmetic so a chunk_size above `Integer.MAX_VALUE` (legal for plain mode up to uint32
       max) can't wrap a negative `int` stride. No format or crypto algorithm change.)
       Maker/Checker/Human gate: Claude
+- [x] Java encrypted path: AES-256-GCM per-chunk, nonce = base XOR i, AAD = header ‖
+      sha256(meta) ‖ i, HMAC-SHA-256 root (HKDF-derived), verify-before-release.
+      Goal: byte-exact to fixed-nonce encrypted vectors; ERR_CHUNK_AUTH on tag flip; no
+      plaintext on failure. CRYPTO-CRITICAL.
+      (solo maker+checker+human-gate 2026-10-01 — same no-second-model constraint as the
+      earlier Java tasks; user explicitly confirmed proceeding with Claude self-review given
+      codex CLI's unreliable verdict in this environment, instead of blocking or debugging
+      the CLI further. `Crypto.encodeEncrypted`/`encodeEncryptedWithFixedNonce`/
+      `decodeEncrypted` added using `javax.crypto.Cipher` (AES/GCM/NoPadding) and
+      `javax.crypto.Mac` (HmacSHA256), stdlib JCA only. 17/17 JUnit tests pass: all 6
+      encrypted vectors (empty, one-byte, chunk-1m, chunk-1m-plus-one, multi-3m, metadata)
+      encode byte-exact and decode back to exact input; the HKDF `root_key` derivation
+      matches spec/vectors.json's standalone `cryptoKnownAnswers[0]` fixture independent of
+      any container; negative-chunk-auth/encrypted-short-clen/encrypted-metadata-tamper
+      return ERR_CHUNK_AUTH; negative-missing-key/encrypted-cap-missing-key (decoded with no
+      key) return ERR_MISSING_KEY; negative-encrypted-empty-wrong-key (decoded with the
+      vector's own wrong key) returns ERR_ROOT_MISMATCH; a wrong key against a non-empty
+      container also returns ERR_CHUNK_AUTH (GCM tag fails before the root is ever reached).
+      `mvnw test` clean, `-Xlint:all -Werror` clean. CHECK: nonce = base_nonce XOR le96(i)
+      matches spec exactly (8-byte LE chunk index in the low bytes, top 4 bytes zero — index
+      never exceeds 2^64); AAD = header_bytes ‖ SHA-256(meta_region) ‖ le64(i); PRK =
+      HMAC-SHA-256(base_nonce, key), root_key = HMAC-SHA-256(PRK, "UBC1 root authentication"
+      ‖ 0x01) — both directions (encode and decode) derive the root key identically and the
+      known-answer test proves the derivation itself is correct, not just self-consistent.
+      SECURITY (manual, per user direction): JCA `Cipher.doFinal` in GCM mode is atomic —
+      it returns full plaintext only after the tag verifies, or throws with zero bytes
+      released, so fail-closed/verify-before-release holds by construction (not by a
+      length check Claude could get wrong); `clen < 16` is rejected as ERR_CHUNK_AUTH before
+      any decrypt attempt; reader precedence (header → metadata → missing-key → caps →
+      payload framing/truncated-footer → chunk auth → root mismatch → trailing-data) matches
+      SPEC.md §5; root hash comparison uses `MessageDigest.isEqual` (constant-time); base_nonce
+      for `encodeEncrypted` comes from `java.security.SecureRandom` (CSPRNG, never reused
+      across containers); `Header.baseNonce()` already returns a defensive clone (fixed in
+      the scaffold task) so the per-chunk XOR nonce can't be corrupted by external mutation.
+      No format change; crypto matches SPEC.md §3-4 exactly, no deviation.)
+      Maker/Checker/Human gate: Claude
 
 ---
 
