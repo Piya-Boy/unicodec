@@ -1,0 +1,27 @@
+sdk/dotnet/src/Ubc/DecodeOptions.cs
+  s_71b5d6711856d1::t_5bbfe17114c896 1-34
+sdk/dotnet/src/Ubc/DecodeResult.cs
+  s_71b5d6711856d1::t_14ab56ae8e6bd1 1-14
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_b6a5bebec4cff3 53-72
+sdk/dotnet/src/Ubc/Payload.cs
+  s_71b5d6711856d1::t_53aa29c212fc92 1-142
+sdk/dotnet/tests/Ubc.Tests/PlainVectorsTests.cs
+  s_71b5d6711856d1::t_252e5748386e59 1-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e47544ff1bef2f3429298fdb3afe35f4a43e41bc",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
