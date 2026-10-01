@@ -1,0 +1,29 @@
+sdk/kotlin/src/main/kotlin/dev/ubc/RootAccumulator.kt
+  s_71b5d6711856d1::t_2cd4e6720be3aa 1-26
+sdk/kotlin/src/test/kotlin/dev/ubc/RunTests.kt
+  s_71b5d6711856d1::t_37559c47ed3d44 7
+sdk/kotlin/src/main/kotlin/dev/ubc/CryptoInternal.kt
+  s_71b5d6711856d1::t_bb066ea40b8ee3 1-86
+docs/ROADMAP.md
+  s_71b5d6711856d1::t_b0dab22faca8e2 94-127
+sdk/kotlin/src/main/kotlin/dev/ubc/Crypto.kt
+  s_71b5d6711856d1::t_05555e3bfce4d5 1-182
+sdk/kotlin/src/test/kotlin/dev/ubc/EncryptedVectorsTest.kt
+  s_71b5d6711856d1::t_cc53ec719d7045 1-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "43185dbabdb92c3499d5c2fd896c6ad049e66ad3",
+  "prompts": {},
+  "sessions": {
+    "s_71b5d6711856d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "84154e2f-914c-48a3-a43a-4ff5169a310f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Piya Miang-lae <piyaboy097@gmail.com>"
+    }
+  }
+}
